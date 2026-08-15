@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Server Cloner | Migration & Synchronization Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-layout" id="appRoot">
+        <!-- Top Navigation Bar -->
+        <header class="app-header" id="mainHeader">
+            <div class="header-brand">
+                <div class="brand-icon-wrapper" aria-hidden="true">
+                    <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 16v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        <polyline points="10 14 15 9 10 4"/>
+                        <line x1="21" y1="9" x2="15" y2="9"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <div class="brand-title-row">
+                        <h1 class="brand-title">Discord Cloner</h1>
+                        <span class="badge-version">v2.0</span>
+                    </div>
+                    <p class="brand-subtitle">Server Migration & Synchronization Engine</p>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div class="connection-status-pill" id="connStatus">
+                    <span class="status-dot"></span>
+                    <span class="status-label" id="connStatusText">Connected</span>
+                </div>
+                <button type="button" class="btn-ghost" id="helpModalBtn" aria-label="Open Documentation and Help">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <span>Guide</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Workspace -->
+        <main class="dashboard-grid" id="mainDashboard">
+            
+            <!-- Left Workspace: Configuration & Controls -->
+            <section class="workspace-column controls-column" aria-label="Configuration Controls">
+                <form id="clonerForm" autocomplete="off">
+                    
+                    <!-- 1. Authentication Credentials Card -->
+                    <div class="card glass-card" id="authCard">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <div class="card-icon-bubble">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 class="card-title">Authentication Token</h2>
+                                    <p class="card-description">Discord account credential with access to both servers</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="userToken" class="form-label">
+                                    <span>Discord User Token</span>
+                                    <span class="required-star">*</span>
+                                </label>
+                                <div class="input-password-wrapper">
+                                    <input 
+                                        type="password" 
+                                        id="userToken" 
+                                        name="userToken"
+                                        placeholder="Paste Discord authorization token" 
+                                        required 
+                                        autocomplete="new-password"
+                                        class="text-input font-mono"
+                                    >
+                                    <button type="button" class="btn-input-action" id="toggleTokenVisibility" aria-label="Toggle token visibility" title="Show/Hide Token">
+                                        <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                            <circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="btn-input-action" id="clearTokenBtn" aria-label="Clear token" title="Clear">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"/>
+                                            <line x1="6" y1="6" x2="18" y2="18"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="input-helper security-badge">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="helper-icon">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                    </svg>
+                                    <span>Tokens are used only for this runtime session, never logged, and cleared from memory upon completion.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Source & Target Servers Card -->
+                    <div class="card glass-card" id="serversCard">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <div class="card-icon-bubble">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+                                        <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+                                        <line x1="6" y1="6" x2="6.01" y2="6"/>
+                                        <line x1="6" y1="18" x2="6.01" y2="18"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 class="card-title">Server Routing</h2>
+                                    <p class="card-description">Specify the origin and destination Discord servers</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="server-inputs-grid">
+                                <div class="form-group">
+                                    <label for="sourceId" class="form-label">
+                                        <span class="badge-role source-badge">SOURCE</span>
+                                        <span>Source Server ID</span>
+                                        <span class="required-star">*</span>
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        id="sourceId" 
+                                        name="sourceId"
+                                        placeholder="e.g. 110293847561829401" 
+                                        required 
+                                        maxlength="22"
+                                        class="text-input font-mono"
+                                    >
+                                    <span class="input-subtext">The server you want to copy structure and data from</span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="targetId" class="form-label">
+                                        <span class="badge-role target-badge">TARGET</span>
+                                        <span>Target Server ID</span>
+                                        <span class="required-star">*</span>
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        id="targetId" 
+                                        name="targetId"
+                                        placeholder="e.g. 129384756102938475" 
+                                        required 
+                                        maxlength="22"
+                                        class="text-input font-mono"
+                                    >
+                                    <span class="input-subtext">Destination server where cloned channels and roles are created</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Migration Scope & Options Card -->
+                    <div class="card glass-card" id="optionsCard">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <div class="card-icon-bubble">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="9 11 12 14 22 4"/>
+                                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 class="card-title">Clone Configuration</h2>
+                                    <p class="card-description">Select specific elements to clone and customize migration</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="options-grid">
+                                <!-- Option 1: Roles -->
+                                <label class="option-card" for="cloneRoles">
+                                    <div class="option-info">
+                                        <div class="option-title-row">
+                                            <span class="option-title">Roles & Hierarchy</span>
+                                        </div>
+                                        <p class="option-desc">Mirror roles, colors, hoist settings, and base permission bitfields</p>
+                                    </div>
+                                    <div class="switch">
+                                        <input type="checkbox" id="cloneRoles" checked>
+                                        <span class="slider"></span>
+                                    </div>
+                                </label>
+
+                                <!-- Option 2: Channels -->
+                                <label class="option-card" for="cloneChannels">
+                                    <div class="option-info">
+                                        <div class="option-title-row">
+                                            <span class="option-title">Channels & Categories</span>
+                                        </div>
+                                        <p class="option-desc">Mirror category trees, text, voice, announcement channels, and topics</p>
+                                    </div>
+                                    <div class="switch">
+                                        <input type="checkbox" id="cloneChannels" checked>
+                                        <span class="slider"></span>
+                                    </div>
+                                </label>
+
+                                <!-- Option 3: Permissions -->
+                                <label class="option-card" for="clonePermissions">
+                                    <div class="option-info">
+                                        <div class="option-title-row">
+                                            <span class="option-title">Channel Overwrites</span>
+                                        </div>
+                                        <p class="option-desc">Apply role-specific channel privacy, hidden categories, and overrides</p>
+                                    </div>
+                                    <div class="switch">
+                                        <input type="checkbox" id="clonePermissions" checked>
+                                        <span class="slider"></span>
+                                    </div>
+                                </label>
+
+                                <!-- Option 4: Server Profile -->
+                                <label class="option-card" for="cloneProfile">
+                                    <div class="option-info">
+                                        <div class="option-title-row">
+                                            <span class="option-title">Server Profile & Assets</span>
+                                        </div>
+                                        <p class="option-desc">Synchronize server title name, icon avatar, and server banner</p>
+                                    </div>
+                                    <div class="switch">
+                                        <input type="checkbox" id="cloneProfile" checked>
+                                        <span class="slider"></span>
+                                    </div>
+                                </label>
+
+                                <!-- Option 5: Chat History -->
+                                <label class="option-card" for="cloneMessages">
+                                    <div class="option-info">
+                                        <div class="option-title-row">
+                                            <span class="option-title">Message History (Webhooks)</span>
+                                        </div>
+                                        <p class="option-desc">Replicate recent channel chat logs with author avatars via webhooks</p>
+                                    </div>
+                                    <div class="switch">
+                                        <input type="checkbox" id="cloneMessages" checked>
+                                        <span class="slider"></span>
+                                    </div>
+                                </label>
+
+                                <!-- Option 6: Attachments -->
+                                <label class="option-card" for="cloneAttachments">
+                                    <div class="option-info">
+                                        <div class="option-title-row">
+                                            <span class="option-title">Message Attachments</span>
+                                        </div>
+                                        <p class="option-desc">Forward images and attachments along with cloned messages</p>
+                                    </div>
+                                    <div class="switch">
+                                        <input type="checkbox" id="cloneAttachments" checked>
+                                        <span class="slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Advanced Accordion -->
+                            <div class="advanced-section">
+                                <button type="button" class="btn-advanced-toggle" id="advancedToggleBtn" aria-expanded="false">
+                                    <span class="toggle-label-group">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron-icon" id="advancedChevron">
+                                            <polyline points="9 18 15 12 9 6"/>
+                                        </svg>
+                                        <span>Advanced Migration Settings</span>
+                                    </span>
+                                    <span class="badge-subtle">Rate limits & Scope</span>
+                                </button>
+
+                                <div class="advanced-panel collapsed" id="advancedPanel">
+                                    <div class="advanced-grid">
+                                        <div class="form-group">
+                                            <label for="msgLimit" class="form-label">
+                                                <span>Messages Per Channel</span>
+                                                <span class="badge-limit" id="limitBadge">15</span>
+                                            </label>
+                                            <input type="range" id="msgLimit" min="1" max="100" value="15" class="range-slider">
+                                            <span class="input-subtext">Max message depth fetched per text channel (1 - 100)</span>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="msgDelay" class="form-label">
+                                                <span>Webhook Send Delay</span>
+                                                <span class="badge-limit" id="delayBadge">1000ms</span>
+                                            </label>
+                                            <input type="range" id="msgDelay" min="300" max="3000" step="100" value="1000" class="range-slider">
+                                            <span class="input-subtext">Delay between message writes to prevent Discord rate limits</span>
+                                        </div>
+
+                                        <div class="form-group full-width">
+                                            <label class="option-card compact-card" for="cleanTarget">
+                                                <div class="option-info">
+                                                    <span class="option-title">Clean Target Server Before Clone</span>
+                                                    <p class="option-desc">Deletes existing channels and custom roles from target server before cloning</p>
+                                                </div>
+                                                <div class="switch">
+                                                    <input type="checkbox" id="cleanTarget" checked>
+                                                    <span class="slider"></span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Trigger Buttons -->
+                    <div class="action-buttons-group">
+                        <button type="submit" id="startBtn" class="btn-primary">
+                            <span class="btn-content">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-action-icon" id="startBtnIcon">
+                                    <polygon points="5 3 19 12 5 21 5 3"/>
+                                </svg>
+                                <span id="startBtnText">Start Migration Sequence</span>
+                            </span>
+                        </button>
+                        <button type="button" id="cancelBtn" class="btn-danger hidden">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-action-icon">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            </svg>
+                            <span>Cancel Operation</span>
+                        </button>
+                    </div>
+
+                </form>
+            </section>
+
+            <!-- Right Workspace: Telemetry & Activity Console -->
+            <section class="workspace-column telemetry-column" aria-label="Live Telemetry and Console">
+                
+                <!-- Progress & Stage Card -->
+                <div class="card glass-card" id="progressCard">
+                    <div class="progress-card-header">
+                        <div class="stage-info">
+                            <span class="stage-pill" id="stagePill">
+                                <span class="stage-dot" id="stageDot"></span>
+                                <span id="stageLabel">Ready for migration</span>
+                            </span>
+                            <span class="elapsed-badge" id="elapsedTimer">00:00</span>
+                        </div>
+                        <div class="progress-percent-wrap">
+                            <span class="percent-number" id="progressText">0%</span>
+                        </div>
+                    </div>
+
+                    <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressTrack">
+                        <div class="progress-fill" id="progressBar">
+                            <div class="progress-shimmer"></div>
+                        </div>
+                    </div>
+
+                    <div class="progress-footer">
+                        <span class="progress-item-detail" id="progressItemDetail">Awaiting configuration parameters...</span>
+                        <span class="progress-counts" id="progressCounts">0 / 0</span>
+                    </div>
+                </div>
+
+                <!-- Live Activity Console -->
+                <div class="card glass-card console-card" id="consoleCard">
+                    <div class="console-header">
+                        <div class="console-title-group">
+                            <div class="live-beacon">
+                                <span class="live-dot"></span>
+                                <span class="live-text">LIVE ACTIVITY</span>
+                            </div>
+                            <span class="log-count-pill" id="logCountPill">0 entries</span>
+                        </div>
+
+                        <!-- Console Actions & Filters Toolbar -->
+                        <div class="console-toolbar">
+                            <div class="log-filter-group" role="tablist" aria-label="Log severity filter">
+                                <button type="button" class="filter-pill active" data-filter="all">All</button>
+                                <button type="button" class="filter-pill" data-filter="info">Info</button>
+                                <button type="button" class="filter-pill" data-filter="success">Success</button>
+                                <button type="button" class="filter-pill" data-filter="warning">Warnings</button>
+                                <button type="button" class="filter-pill" data-filter="error">Errors</button>
+                            </div>
+
+                            <div class="console-actions">
+                                <div class="search-input-wrapper">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                    </svg>
+                                    <input type="text" id="logSearchInput" placeholder="Filter logs..." aria-label="Search activity logs">
+                                </div>
+
+                                <button type="button" class="btn-icon-square" id="copyLogsBtn" title="Copy all logs to clipboard" aria-label="Copy logs">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                    </svg>
+                                </button>
+
+                                <button type="button" class="btn-icon-square" id="clearLogsBtn" title="Clear log output" aria-label="Clear visible logs">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terminal Log Stream -->
+                    <div class="console-terminal" id="terminal">
+                        <div class="log-stream" id="logStream" role="log" aria-live="polite">
+                            <div class="log-entry log-entry-info">
+                                <span class="log-time">00:00:00</span>
+                                <span class="log-icon-type info-icon">ℹ</span>
+                                <span class="log-message">Ready. Enter your credentials and server IDs to start synchronization.</span>
+                            </div>
+                        </div>
+
+                        <!-- Sticky Jump to Latest Banner -->
+                        <button type="button" class="jump-latest-btn hidden" id="jumpLatestBtn">
+                            <span>↓ New activity received</span>
+                        </button>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <!-- Confirmation Modal (Destructive operation warning) -->
+    <div class="modal-backdrop hidden" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <div class="modal-card">
+            <div class="modal-icon-header warning-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+            </div>
+            <div class="modal-body">
+                <h3 class="modal-title" id="confirmTitle">Target Server Modification Notice</h3>
+                <p class="modal-text">
+                    You are about to initiate synchronization to the target server.
+                    If "Clean Target Server" is enabled, existing channels and roles on the target will be wiped prior to cloning.
+                </p>
+                <div class="confirm-summary-box">
+                    <div class="confirm-item">
+                        <span class="confirm-label">Source ID:</span>
+                        <span class="confirm-val font-mono" id="confirmSourceId">-</span>
+                    </div>
+                    <div class="confirm-item">
+                        <span class="confirm-label">Target ID:</span>
+                        <span class="confirm-val font-mono" id="confirmTargetId">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-ghost" id="cancelConfirmBtn">Cancel</button>
+                <button type="button" class="btn-primary" id="proceedConfirmBtn">I Understand, Proceed</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Migration Summary / Success Modal -->
+    <div class="modal-backdrop hidden" id="summaryModal" role="dialog" aria-modal="true" aria-labelledby="summaryTitle">
+        <div class="modal-card success-card">
+            <div class="modal-icon-header success-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+            </div>
+            <div class="modal-body">
+                <h3 class="modal-title" id="summaryTitle">Migration Completed Successfully</h3>
+                <p class="modal-text">
+                    All requested server assets, roles, channels, and chat records have been synchronized.
+                </p>
+                <div class="stats-summary-grid">
+                    <div class="stat-card">
+                        <span class="stat-label">Duration</span>
+                        <span class="stat-value font-mono" id="statDuration">0s</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Roles Created</span>
+                        <span class="stat-value font-mono" id="statRoles">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Categories</span>
+                        <span class="stat-value font-mono" id="statCategories">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Channels</span>
+                        <span class="stat-value font-mono" id="statChannels">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Messages</span>
+                        <span class="stat-value font-mono" id="statMessages">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Warnings</span>
+                        <span class="stat-value font-mono" id="statWarnings">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-ghost" id="viewLogsSummaryBtn">View Logs</button>
+                <button type="button" class="btn-primary" id="closeSummaryBtn">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Guide Modal -->
+    <div class="modal-backdrop hidden" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+        <div class="modal-card">
+            <div class="modal-header-simple">
+                <h3 class="modal-title" id="helpTitle">Migration Guide & Requirements</h3>
+                <button type="button" class="btn-close-modal" id="closeHelpBtn" aria-label="Close guide">✕</button>
+            </div>
+            <div class="modal-body modal-scrollable">
+                <div class="guide-step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <h4>Obtain Server IDs</h4>
+                        <p>Enable <em>Developer Mode</em> in Discord (Settings → Advanced → Developer Mode). Right-click on your source and target servers in Discord and select <strong>Copy Server ID</strong>.</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <h4>Permissions Requirement</h4>
+                        <p>Your account must have <strong>Administrator</strong> or <strong>Manage Server</strong> permissions on the target server to create channels, roles, and webhooks.</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <h4>Message History Synchronization</h4>
+                        <p>Messages are replicated via Discord webhooks with matching usernames and avatars. Set an appropriate message limit to match your needs.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-primary" id="dismissHelpBtn">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer" aria-live="assertive"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

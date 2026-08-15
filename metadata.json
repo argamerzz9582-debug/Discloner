@@ -1,0 +1,6 @@
+{
+  "name": "Discord Server Cloner",
+  "description": "Premium Discord server cloning and migration control center with real-time telemetry, granular stage progression, and robust activity logging.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
