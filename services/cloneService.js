@@ -1,47 +1,46 @@
+/**
+ * DISCLONER - Enterprise Server Clone & Migration Engine
+ * User-token based architecture with deterministic stages, manifest tracking, and verification
+ */
+
 import { createLogEntry } from '../utils/logger.js';
 import { createDiscordClient, authenticateClient, destroyClient } from './discordService.js';
+import { createCleanupPlan, executeCleanupPlan, verifyCleanupState } from './cleaner/index.js';
+import { MigrationManifest } from './manifest.js';
+import { verifyTargetGuildMigration } from './verifyService.js';
+import { VERIFICATION_STATUSES } from './configContract.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Executes a full Discord server cloning operation.
- *
- * @param {Object} params
- * @param {string} params.userToken
- * @param {string} params.sourceId
- * @param {string} params.targetId
- * @param {Object} params.options
- * @param {Function} params.onStage - (stage, label, progress) => void
- * @param {Function} params.onProgress - (percent, current, total, item) => void
- * @param {Function} params.onLog - (logEntry) => void
- * @param {Function} params.isCancelled - () => boolean
- * @returns {Promise<Object>} statistics
+ * Sanitizes content to prevent unintended massive pings
+ */
+function sanitizeMentions(text, policy = 'sanitize') {
+    if (!text || typeof text !== 'string' || policy === 'allow') return text;
+    return text
+        .replace(/@everyone/g, '@\u200beveryone')
+        .replace(/@here/g, '@\u200bhere');
+}
+
+/**
+ * Executes a full Discord server cloning operation with verification and telemetry
  */
 export async function executeClone({
     userToken,
     sourceId,
     targetId,
-    options,
+    options = {},
     onStage = () => {},
     onProgress = () => {},
     onLog = () => {},
     isCancelled = () => false
 }) {
     const startTime = Date.now();
-    const stats = {
-        rolesCreated: 0,
-        categoriesCreated: 0,
-        channelsCreated: 0,
-        messagesCopied: 0,
-        attachmentsCopied: 0,
-        warningsCount: 0,
-        durationMs: 0,
-        sourceServerName: 'Unknown',
-        targetServerName: 'Unknown'
-    };
+    const manifest = new MigrationManifest(sourceId, targetId, options);
 
     const emitLog = (type, message, detail = null, stage = null) => {
-        if (type === 'warning') stats.warningsCount++;
+        if (type === 'warning') manifest.addWarning(message, detail);
+        if (type === 'error') manifest.addError(message, null, detail);
         onLog(createLogEntry(type, message, detail, stage));
     };
 
@@ -55,98 +54,96 @@ export async function executeClone({
     };
 
     try {
-        // 1. INITIALIZING
-        onStage('initializing', 'Initializing Discord Client', 2);
-        emitLog('info', 'Initializing secure client session...', null, 'initializing');
+        // ======================================================================
+        // 1. DISCOVERY & INITIALIZATION
+        // ======================================================================
+        onStage('initializing', 'Initializing Client Session', 2);
+        emitLog('info', 'Starting client session with Discord Gateway...', null, 'initializing');
         client = createDiscordClient();
 
+        // ======================================================================
         // 2. AUTHENTICATING
+        // ======================================================================
         checkCancellation();
-        onStage('authenticating', 'Authenticating with Discord', 6);
-        emitLog('info', 'Authenticating credentials with Discord gateway...', null, 'authenticating');
+        onStage('authenticating', 'Authenticating Credentials', 6);
+        emitLog('info', 'Authenticating token with Discord...', null, 'authenticating');
 
         const user = await authenticateClient(client, userToken);
-        emitLog('success', `Authenticated successfully as ${user.tag}`, null, 'authenticating');
+        emitLog('success', `Authenticated as ${user.tag || user.username}`, null, 'authenticating');
 
+        // ======================================================================
         // 3. VALIDATING SERVERS
+        // ======================================================================
         checkCancellation();
         onStage('validating_servers', 'Detecting Source and Target Guilds', 12);
-        emitLog('info', 'Searching for source & target servers in client cache...', null, 'validating_servers');
+        emitLog('info', 'Searching for source & target servers in account cache...', null, 'validating_servers');
 
         const sourceGuild = client.guilds.cache.get(sourceId);
         const targetGuild = client.guilds.cache.get(targetId);
 
         if (!sourceGuild) {
-            throw new Error(`Source server with ID (${sourceId}) was not found or the account does not have access.`);
+            throw new Error(`Source server with ID (${sourceId}) was not found or your account does not have access.`);
         }
         if (!targetGuild) {
-            throw new Error(`Target server with ID (${targetId}) was not found or the account is not joined.`);
+            throw new Error(`Target server with ID (${targetId}) was not found or your account is not a member.`);
         }
 
-        stats.sourceServerName = sourceGuild.name;
-        stats.targetServerName = targetGuild.name;
+        emitLog('success', `Source: "${sourceGuild.name}" (${sourceGuild.memberCount || 'N/A'} members)`, null, 'validating_servers');
+        emitLog('success', `Target: "${targetGuild.name}"`, null, 'validating_servers');
 
-        emitLog('success', `Source server confirmed: "${sourceGuild.name}" (${sourceGuild.memberCount || 'N/A'} members)`, null, 'validating_servers');
-        emitLog('success', `Target server confirmed: "${targetGuild.name}"`, null, 'validating_servers');
-
-        // 4. READING SOURCE
+        // ======================================================================
+        // 4. READING SOURCE STRUCTURE
+        // ======================================================================
         checkCancellation();
         onStage('reading_source', 'Reading Source Guild Structure', 18);
-        emitLog('info', 'Fetching roles, channels, and guild configuration...', null, 'reading_source');
+        emitLog('info', 'Fetching roles, channels, categories, and guild configuration...', null, 'reading_source');
 
         try {
-            await Promise.all([
+            await Promise.allSettled([
                 sourceGuild.roles.fetch().catch(() => {}),
-                sourceGuild.channels.fetch().catch(() => {})
+                sourceGuild.channels.fetch().catch(() => {}),
+                targetGuild.roles.fetch().catch(() => {}),
+                targetGuild.channels.fetch().catch(() => {})
             ]);
         } catch (fetchErr) {
-            emitLog('warning', 'Could not pre-fetch full guild cache, using existing cached structure.', fetchErr.message, 'reading_source');
+            emitLog('warning', 'Could not pre-fetch full guild cache, using cached structure.', fetchErr.message, 'reading_source');
         }
 
-        // 5. CLEANING TARGET
+        // ======================================================================
+        // 5. OPTIONAL CLEANUP STAGE
+        // ======================================================================
+        let cleanupReport = { status: 'SKIPPED' };
         if (options.cleanTarget) {
             checkCancellation();
-            onStage('cleaning_target', 'Cleaning Target Server Structure', 25);
-            emitLog('info', 'Cleaning existing channels & custom roles in target server...', null, 'cleaning_target');
+            onStage('cleaning_target', 'Cleaning Target Server Structure', 24);
 
-            const targetChannels = Array.from(targetGuild.channels.cache.values());
-            const CH_BATCH_SIZE = 3;
-            for (let i = 0; i < targetChannels.length; i += CH_BATCH_SIZE) {
-                checkCancellation();
-                const batch = targetChannels.slice(i, i + CH_BATCH_SIZE);
-                await Promise.allSettled(batch.map(async (ch, idx) => {
-                    try {
-                        await ch.delete();
-                        const currentCount = i + idx + 1;
-                        onProgress(25 + Math.round((currentCount / Math.max(1, targetChannels.length)) * 5), currentCount, targetChannels.length, `Deleted #${ch.name}`);
-                    } catch (delErr) {
-                        emitLog('warning', `Skipped deleting channel #${ch.name}: ${delErr.message}`, null, 'cleaning_target');
-                    }
-                }));
-            }
+            const cleanupPlan = createCleanupPlan(targetGuild, options.cleanupMode || 'full', options);
+            emitLog('info', `Target cleanup starting (${cleanupPlan.summary.channelsToDeleteCount} channels, ${cleanupPlan.summary.rolesToDeleteCount} roles)...`, null, 'cleaning_target');
 
-            const targetRoles = Array.from(targetGuild.roles.cache.values())
-                .filter(r => r.editable && r.name !== '@everyone' && !r.managed);
-            const ROLE_BATCH_SIZE = 3;
-            for (let i = 0; i < targetRoles.length; i += ROLE_BATCH_SIZE) {
-                checkCancellation();
-                const batch = targetRoles.slice(i, i + ROLE_BATCH_SIZE);
-                await Promise.allSettled(batch.map(async (role) => {
-                    try {
-                        await role.delete();
-                    } catch (rErr) {
-                        emitLog('warning', `Skipped deleting role @${role.name}: ${rErr.message}`, null, 'cleaning_target');
-                    }
-                }));
-            }
-            emitLog('success', 'Target server structure cleaned successfully.', null, 'cleaning_target');
+            const cleanupResult = await executeCleanupPlan({
+                targetGuild,
+                plan: cleanupPlan,
+                onProgress: (pct, cur, tot, item) => onProgress(24 + Math.round((pct / 100) * 8), cur, tot, item),
+                onLog: emitLog,
+                isCancelled
+            });
+
+            cleanupReport = verifyCleanupState(targetGuild, cleanupResult);
+            emitLog(
+                cleanupReport.verified ? 'success' : 'warning',
+                `Target cleanup finished with status: ${cleanupReport.status}`,
+                null,
+                'cleaning_target'
+            );
         }
 
-        // 6. CLONING SERVER PROFILE
+        // ======================================================================
+        // 6. CLONING SERVER PROFILE / BRANDING
+        // ======================================================================
         if (options.cloneProfile) {
             checkCancellation();
-            onStage('cloning_profile', 'Cloning Server Profile & Branding', 35);
-            emitLog('info', 'Synchronizing server name and visual assets...', null, 'cloning_profile');
+            onStage('cloning_profile', 'Cloning Server Branding & Profile', 34);
+            emitLog('info', 'Synchronizing server title, icon, and banner assets...', null, 'cloning_profile');
 
             const profileTasks = [];
 
@@ -154,16 +151,16 @@ export async function executeClone({
                 profileTasks.push(
                     targetGuild.setName(sourceGuild.name)
                         .then(() => emitLog('success', `Updated server name to "${sourceGuild.name}"`, null, 'cloning_profile'))
-                        .catch(nameErr => emitLog('warning', 'Failed to update server name', nameErr.message, 'cloning_profile'))
+                        .catch(err => emitLog('warning', 'Failed to update server name', err.message, 'cloning_profile'))
                 );
             }
 
-            const iconUrl = sourceGuild.iconURL({ dynamic: true, size: 4096 });
+            const iconUrl = sourceGuild.iconURL ? sourceGuild.iconURL({ dynamic: true, size: 4096 }) : null;
             if (iconUrl) {
                 profileTasks.push(
                     targetGuild.setIcon(iconUrl)
                         .then(() => emitLog('success', 'Synchronized server icon asset', null, 'cloning_profile'))
-                        .catch(iconErr => emitLog('warning', 'Could not apply server icon', iconErr.message, 'cloning_profile'))
+                        .catch(err => emitLog('warning', 'Could not apply server icon', err.message, 'cloning_profile'))
                 );
             }
 
@@ -172,7 +169,7 @@ export async function executeClone({
                 profileTasks.push(
                     targetGuild.setBanner(bannerUrl)
                         .then(() => emitLog('success', 'Synchronized server banner asset', null, 'cloning_profile'))
-                        .catch(bannerErr => emitLog('warning', 'Could not apply server banner (tier requirement or permission issue)', bannerErr.message, 'cloning_profile'))
+                        .catch(err => emitLog('warning', 'Could not apply server banner (tier requirement)', err.message, 'cloning_profile'))
                 );
             }
 
@@ -181,24 +178,26 @@ export async function executeClone({
             }
         }
 
+        // ======================================================================
         // 7. CLONING ROLES
-        const roleMap = new Map(); // sourceRoleId -> targetRoleId
+        // ======================================================================
         if (options.cloneRoles) {
             checkCancellation();
-            onStage('cloning_roles', 'Cloning Roles & Permissions', 45);
-            emitLog('info', 'Cloning role hierarchy and base permissions...', null, 'cloning_roles');
+            onStage('cloning_roles', 'Cloning Roles & Hierarchy', 42);
+            emitLog('info', 'Cloning custom roles, colors, and permissions...', null, 'cloning_roles');
 
             const sourceRoles = Array.from(sourceGuild.roles.cache.values())
                 .filter(r => !r.managed)
                 .sort((a, b) => a.position - b.position);
 
+            manifest.roles.planned = sourceRoles.filter(r => r.name !== '@everyone').length;
             const totalRoles = sourceRoles.length;
             let roleIdx = 0;
 
             for (const role of sourceRoles) {
                 checkCancellation();
                 roleIdx++;
-                const currentPct = 45 + Math.round((roleIdx / Math.max(1, totalRoles)) * 15);
+                const currentPct = 42 + Math.round((roleIdx / Math.max(1, totalRoles)) * 16);
                 onProgress(currentPct, roleIdx, totalRoles, `@${role.name}`);
 
                 if (role.name === '@everyone') {
@@ -206,7 +205,7 @@ export async function executeClone({
                     if (targetEveryone) {
                         try {
                             await targetEveryone.setPermissions(role.permissions);
-                            roleMap.set(role.id, targetEveryone.id);
+                            manifest.roleMap.set(role.id, targetEveryone.id);
                         } catch (permErr) {
                             emitLog('warning', 'Could not set @everyone base permissions', permErr.message, 'cloning_roles');
                         }
@@ -223,35 +222,39 @@ export async function executeClone({
                         mentionable: role.mentionable
                     });
                     if (newRole) {
-                        roleMap.set(role.id, newRole.id);
-                        stats.rolesCreated++;
+                        manifest.recordRole(role, newRole, 'created');
                         emitLog('success', `Created role @${role.name}`, null, 'cloning_roles');
                     }
                 } catch (rCreateErr) {
+                    manifest.recordRole(role, null, 'failed', rCreateErr);
                     emitLog('warning', `Failed to create role @${role.name}`, rCreateErr.message, 'cloning_roles');
                 }
+
+                await sleep(100);
             }
-            emitLog('success', `Finished cloning roles (${stats.rolesCreated} custom roles created).`, null, 'cloning_roles');
+            emitLog('success', `Finished cloning roles (${manifest.roles.created} created, ${manifest.roles.failed} failed).`, null, 'cloning_roles');
         }
 
+        // ======================================================================
         // 8. CLONING CATEGORIES
-        const catMap = new Map(); // sourceCatId -> targetCatId
+        // ======================================================================
         if (options.cloneChannels) {
             checkCancellation();
-            onStage('cloning_categories', 'Cloning Category Hierarchy', 62);
-            emitLog('info', 'Building category containers...', null, 'cloning_categories');
+            onStage('cloning_categories', 'Building Category Containers', 60);
+            emitLog('info', 'Building category containers and structure...', null, 'cloning_categories');
 
             const sourceCategories = Array.from(sourceGuild.channels.cache.values())
                 .filter(c => c.type === 'GUILD_CATEGORY')
                 .sort((a, b) => a.position - b.position);
 
+            manifest.categories.planned = sourceCategories.length;
             const totalCats = sourceCategories.length;
             let catIdx = 0;
 
             for (const cat of sourceCategories) {
                 checkCancellation();
                 catIdx++;
-                const currentPct = 62 + Math.round((catIdx / Math.max(1, totalCats)) * 8);
+                const currentPct = 60 + Math.round((catIdx / Math.max(1, totalCats)) * 8);
                 onProgress(currentPct, catIdx, totalCats, `📁 ${cat.name}`);
 
                 try {
@@ -260,37 +263,42 @@ export async function executeClone({
                         position: cat.position
                     });
                     if (newCat) {
-                        catMap.set(cat.id, newCat.id);
-                        stats.categoriesCreated++;
+                        manifest.recordCategory(cat, newCat, 'created');
                         emitLog('success', `Created category [${cat.name}]`, null, 'cloning_categories');
                     }
                 } catch (catErr) {
+                    manifest.recordCategory(cat, null, 'failed', catErr);
                     emitLog('warning', `Failed to create category [${cat.name}]`, catErr.message, 'cloning_categories');
                 }
+
+                await sleep(100);
             }
         }
 
+        // ======================================================================
         // 9. CLONING CHANNELS
-        const channelMap = new Map(); // sourceChannelId -> targetChannel (Discord Channel object)
+        // ======================================================================
+        const targetChannelObjects = new Map(); // sourceId -> targetChannel Discord object
         if (options.cloneChannels) {
             checkCancellation();
-            onStage('cloning_channels', 'Building Guild Channels', 70);
+            onStage('cloning_channels', 'Building Channels & Structure', 68);
             emitLog('info', 'Creating text, voice, and announcement channels...', null, 'cloning_channels');
 
             const sourceChannels = Array.from(sourceGuild.channels.cache.values())
                 .filter(c => c.type !== 'GUILD_CATEGORY')
                 .sort((a, b) => a.position - b.position);
 
+            manifest.channels.planned = sourceChannels.length;
             const totalChans = sourceChannels.length;
             let chIdx = 0;
 
             for (const ch of sourceChannels) {
                 checkCancellation();
                 chIdx++;
-                const currentPct = 70 + Math.round((chIdx / Math.max(1, totalChans)) * 12);
+                const currentPct = 68 + Math.round((chIdx / Math.max(1, totalChans)) * 14);
                 onProgress(currentPct, chIdx, totalChans, `#${ch.name}`);
 
-                const parentId = ch.parentId ? catMap.get(ch.parentId) : null;
+                const parentId = ch.parentId ? manifest.categoryMap.get(ch.parentId) : null;
                 const channelOptions = {
                     type: ch.type,
                     topic: ch.topic || undefined,
@@ -304,48 +312,60 @@ export async function executeClone({
                 try {
                     const newChannel = await targetGuild.channels.create(ch.name, channelOptions);
                     if (newChannel) {
-                        channelMap.set(ch.id, newChannel);
-                        stats.channelsCreated++;
+                        manifest.recordChannel(ch, newChannel, 'created');
+                        targetChannelObjects.set(ch.id, newChannel);
                         emitLog('success', `Created channel #${ch.name}`, null, 'cloning_channels');
                     }
                 } catch (chErr) {
-                    // Try fallback without custom bitrate/topic if failed
+                    // Try graceful fallback with standard parameters
                     try {
+                        const fallbackType = ch.type === 'GUILD_VOICE' ? 'GUILD_VOICE' : 'GUILD_TEXT';
                         const fallbackChannel = await targetGuild.channels.create(ch.name, {
-                            type: ch.type === 'GUILD_VOICE' ? 'GUILD_VOICE' : 'GUILD_TEXT',
+                            type: fallbackType,
                             parent: parentId || undefined
                         });
                         if (fallbackChannel) {
-                            channelMap.set(ch.id, fallbackChannel);
-                            stats.channelsCreated++;
+                            manifest.recordChannel(ch, fallbackChannel, 'created');
+                            targetChannelObjects.set(ch.id, fallbackChannel);
                             emitLog('warning', `Created channel #${ch.name} with standard fallback parameters`, chErr.message, 'cloning_channels');
                         }
                     } catch (fallbackErr) {
+                        manifest.recordChannel(ch, null, 'failed', fallbackErr);
                         emitLog('warning', `Could not create channel #${ch.name}`, fallbackErr.message, 'cloning_channels');
                     }
                 }
+
+                await sleep(100);
             }
-            emitLog('success', `Finished building channels (${stats.channelsCreated} channels created).`, null, 'cloning_channels');
+            emitLog('success', `Finished building channels (${manifest.channels.created} created, ${manifest.channels.failed} failed).`, null, 'cloning_channels');
         }
 
+        // ======================================================================
         // 10. APPLYING PERMISSION OVERWRITES
+        // ======================================================================
         if (options.clonePermissions && (options.cloneRoles || options.cloneChannels)) {
             checkCancellation();
-            onStage('applying_permissions', 'Applying Channel Permission Overwrites', 84);
+            onStage('applying_permissions', 'Applying Permission Overwrites', 82);
             emitLog('info', 'Configuring channel privacy & role overwrites...', null, 'applying_permissions');
 
-            let overwriteCount = 0;
-            for (const [sourceChId, targetCh] of channelMap.entries()) {
+            for (const [sourceChId, targetCh] of targetChannelObjects.entries()) {
                 checkCancellation();
                 const sourceCh = sourceGuild.channels.cache.get(sourceChId);
                 if (!sourceCh || !sourceCh.permissionOverwrites) continue;
 
                 const newOverwrites = [];
                 for (const [id, overwrite] of sourceCh.permissionOverwrites.cache.entries()) {
+                    manifest.permissions.planned++;
                     let targetIdResolved = null;
                     if (overwrite.type === 'role') {
-                        targetIdResolved = roleMap.get(id);
+                        targetIdResolved = manifest.roleMap.get(id);
+                    } else if (overwrite.type === 'member') {
+                        // User member permission overwrites
+                        if (id === client.user.id) {
+                            targetIdResolved = client.user.id;
+                        }
                     }
+
                     if (targetIdResolved) {
                         newOverwrites.push({
                             id: targetIdResolved,
@@ -353,31 +373,36 @@ export async function executeClone({
                             allow: overwrite.allow,
                             deny: overwrite.deny
                         });
+                        manifest.permissions.applied++;
+                    } else {
+                        manifest.permissions.skipped++;
                     }
                 }
 
                 if (newOverwrites.length > 0 && targetCh.permissionOverwrites) {
                     try {
                         await targetCh.permissionOverwrites.set(newOverwrites);
-                        overwriteCount++;
                     } catch (permErr) {
+                        manifest.permissions.failed++;
                         emitLog('warning', `Failed to apply permissions to #${targetCh.name}`, permErr.message, 'applying_permissions');
                     }
                 }
             }
-            emitLog('success', `Applied permission overrides across ${overwriteCount} channels.`, null, 'applying_permissions');
+            emitLog('success', `Applied ${manifest.permissions.applied} permission overwrites across channels (${manifest.permissions.skipped} skipped).`, null, 'applying_permissions');
         }
 
-        // 11. CLONING MESSAGES
-        if (options.cloneMessages && options.cloneChannels && channelMap.size > 0) {
+        // ======================================================================
+        // 11. CLONING MESSAGES (OPTIONAL)
+        // ======================================================================
+        if (options.cloneMessages && options.cloneChannels && targetChannelObjects.size > 0) {
             checkCancellation();
             const limit = options.msgLimit || 15;
             const delay = options.msgDelay || 1000;
 
-            onStage('cloning_messages', `Cloning Message History (Up to ${limit}/channel)`, 90);
-            emitLog('info', `Syncing recent chat history via secure Webhooks (${limit} msgs/channel)...`, null, 'cloning_messages');
+            onStage('cloning_messages', `Cloning Message History (Up to ${limit}/channel)`, 88);
+            emitLog('info', `Syncing chat logs via webhooks (${limit} msgs/channel, ${delay}ms pacing)...`, null, 'cloning_messages');
 
-            const textChannelsToSync = Array.from(channelMap.entries()).filter(([srcId, tgtCh]) => {
+            const textChannelsToSync = Array.from(targetChannelObjects.entries()).filter(([srcId, tgtCh]) => {
                 const src = sourceGuild.channels.cache.get(srcId);
                 return src && src.isText() && tgtCh && tgtCh.isText();
             });
@@ -390,7 +415,7 @@ export async function executeClone({
                 syncedChannelsCount++;
                 const sourceChannel = sourceGuild.channels.cache.get(srcId);
                 onProgress(
-                    90 + Math.round((syncedChannelsCount / Math.max(1, totalTextChannels)) * 8),
+                    88 + Math.round((syncedChannelsCount / Math.max(1, totalTextChannels)) * 6),
                     syncedChannelsCount,
                     totalTextChannels,
                     `Syncing messages in #${targetChannel.name}`
@@ -401,8 +426,8 @@ export async function executeClone({
                     if (messages && messages.size > 0) {
                         let webhook = null;
                         try {
-                            webhook = await targetChannel.createWebhook('MigrationSync', {
-                                avatar: client.user.displayAvatarURL({ format: 'png' })
+                            webhook = await targetChannel.createWebhook('DisclonerSync', {
+                                avatar: client.user.displayAvatarURL ? client.user.displayAvatarURL({ format: 'png' }) : undefined
                             });
                             activeWebhooks.push(webhook);
                         } catch (whErr) {
@@ -411,25 +436,58 @@ export async function executeClone({
                         }
 
                         const msgArray = Array.from(messages.values()).reverse();
+                        manifest.messages.planned += msgArray.length;
+
                         for (const msg of msgArray) {
                             checkCancellation();
-                            if (msg.content || (options.cloneAttachments && msg.attachments.size > 0)) {
-                                const files = options.cloneAttachments 
-                                    ? msg.attachments.map(a => a.url)
+                            
+                            // Prevent duplicate sending
+                            if (manifest.messageMap.has(msg.id)) {
+                                manifest.messages.skipped++;
+                                continue;
+                            }
+
+                            const hasAttachments = options.cloneAttachments && msg.attachments && msg.attachments.size > 0;
+                            if (msg.content || hasAttachments) {
+                                const files = hasAttachments 
+                                    ? msg.attachments.map(a => a.url).filter(Boolean)
                                     : [];
 
-                                try {
-                                    await webhook.send({
-                                        content: msg.content || ' ',
-                                        username: msg.author ? msg.author.username.substring(0, 32) : 'User',
-                                        avatarURL: msg.author ? msg.author.displayAvatarURL({ dynamic: true }) : undefined,
-                                        files: files.slice(0, 10)
-                                    });
-                                    stats.messagesCopied++;
-                                    stats.attachmentsCopied += files.length;
-                                    await sleep(delay);
-                                } catch (sendErr) {
-                                    emitLog('warning', `Failed to copy message from ${msg.author?.username || 'user'}`, sendErr.message, 'cloning_messages');
+                                if (options.cloneAttachments && msg.attachments) {
+                                    manifest.attachments.planned += msg.attachments.size;
+                                }
+
+                                const safeContent = sanitizeMentions(msg.content, options.mentionPolicy);
+
+                                // Retry loop for transient rate limits or webhook pacing
+                                let sent = false;
+                                let retryAttempts = 0;
+                                const maxRetries = 2;
+
+                                while (!sent && retryAttempts <= maxRetries) {
+                                    checkCancellation();
+                                    try {
+                                        await webhook.send({
+                                            content: safeContent || ' ',
+                                            username: msg.author ? msg.author.username.substring(0, 32) : 'User',
+                                            avatarURL: msg.author && msg.author.displayAvatarURL ? msg.author.displayAvatarURL({ dynamic: true }) : undefined,
+                                            files: files.slice(0, 10)
+                                        });
+                                        sent = true;
+                                        manifest.messageMap.set(msg.id, true);
+                                        manifest.messages.copied++;
+                                        manifest.attachments.copied += files.length;
+                                        await sleep(delay);
+                                    } catch (sendErr) {
+                                        retryAttempts++;
+                                        if (retryAttempts <= maxRetries) {
+                                            await sleep(delay * 1.5);
+                                        } else {
+                                            manifest.messages.failed++;
+                                            if (files.length > 0) manifest.attachments.failed += files.length;
+                                            emitLog('warning', `Failed to copy message from ${msg.author?.username || 'user'}`, sendErr.message, 'cloning_messages');
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -438,27 +496,62 @@ export async function executeClone({
                             await webhook.delete();
                             activeWebhooks = activeWebhooks.filter(w => w.id !== webhook.id);
                         } catch {
-                            // ignore webhook deletion error
+                            // ignore webhook cleanup error
                         }
                     }
                 } catch (chMsgErr) {
                     emitLog('warning', `Could not fetch messages from #${sourceChannel.name}`, chMsgErr.message, 'cloning_messages');
                 }
             }
-            emitLog('success', `Message history sync finished (${stats.messagesCopied} messages cloned).`, null, 'cloning_messages');
+            emitLog('success', `Message migration finished (${manifest.messages.copied} messages copied).`, null, 'cloning_messages');
         }
 
-        // 12. COMPLETED
-        onStage('completed', 'Migration Completed Successfully', 100);
-        onProgress(100, 1, 1, 'Completed');
-        stats.durationMs = Date.now() - startTime;
+        // ======================================================================
+        // 12. VERIFICATION ENGINE
+        // ======================================================================
+        checkCancellation();
+        onStage('verifying', 'Verifying Target Server State', 95);
+        emitLog('info', 'Performing post-migration audit and comparing expected hierarchy...', null, 'verifying');
 
-        emitLog('success', `All migration stages completed in ${(stats.durationMs / 1000).toFixed(1)}s`, null, 'completed');
-        return stats;
+        const verification = await verifyTargetGuildMigration({
+            targetGuild,
+            manifest,
+            options
+        });
+
+        emitLog(
+            verification.status === VERIFICATION_STATUSES.VERIFIED ? 'success' : 'warning',
+            `Verification complete: ${verification.status}`,
+            null,
+            'verifying'
+        );
+
+        // ======================================================================
+        // 13. COMPLETED & REPORT
+        // ======================================================================
+        onStage('completed', 'Migration Completed', 100);
+        onProgress(100, 1, 1, 'Completed');
+
+        const finalReport = manifest.finalize();
+        finalReport.sourceServerName = sourceGuild.name;
+        finalReport.targetServerName = targetGuild.name;
+        finalReport.verification = verification;
+        finalReport.cleanup = cleanupReport;
+        finalReport.status = verification.status;
+
+        // Legacy compatibility properties
+        finalReport.rolesCreated = manifest.roles.created;
+        finalReport.categoriesCreated = manifest.categories.created;
+        finalReport.channelsCreated = manifest.channels.created;
+        finalReport.messagesCopied = manifest.messages.copied;
+        finalReport.attachmentsCopied = manifest.attachments.copied;
+        finalReport.warningsCount = manifest.warnings.length;
+
+        emitLog('success', `Migration finished in ${(finalReport.durationMs / 1000).toFixed(1)}s with status: ${finalReport.status}`, null, 'completed');
+        return finalReport;
 
     } catch (err) {
-        stats.durationMs = Date.now() - startTime;
-        // Clean any dangling webhooks created in this run
+        manifest.finalize();
         for (const wh of activeWebhooks) {
             try { await wh.delete(); } catch {}
         }

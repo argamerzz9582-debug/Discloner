@@ -85,8 +85,15 @@
     const jumpLatestBtn = document.getElementById('jumpLatestBtn');
     const filterPills = document.querySelectorAll('.filter-pill');
 
-    // Modals
-    const confirmModal = document.getElementById('confirmModal');
+    // DOM Elements - Preflight in Confirm Modal
+    const preflightBox = document.getElementById('preflightBox');
+    const preflightStatusBadge = document.getElementById('preflightStatusBadge');
+    const preflightSubText = document.getElementById('preflightSubText');
+    const preflightChecksList = document.getElementById('preflightChecksList');
+    const confirmCleanupAlert = document.getElementById('confirmCleanupAlert');
+    const statVerifyStatus = document.getElementById('statVerifyStatus');
+    const statPermissions = document.getElementById('statPermissions');
+    const statCleanup = document.getElementById('statCleanup');
     const confirmSourceId = document.getElementById('confirmSourceId');
     const confirmTargetId = document.getElementById('confirmTargetId');
     const proceedConfirmBtn = document.getElementById('proceedConfirmBtn');
@@ -211,7 +218,7 @@
 
     function applyPreset(preset) {
         if (preset === 'standard') {
-            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = true;
+            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = false;
             if (cloneRolesCheckbox) cloneRolesCheckbox.checked = true;
             if (cloneChannelsCheckbox) cloneChannelsCheckbox.checked = true;
             if (clonePermissionsCheckbox) clonePermissionsCheckbox.checked = true;
@@ -220,7 +227,7 @@
             syncMessageOptionUI();
             showToast('Applied preset: Full Server Architecture', 'info');
         } else if (preset === 'complete-archive') {
-            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = true;
+            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = false;
             if (cloneRolesCheckbox) cloneRolesCheckbox.checked = true;
             if (cloneChannelsCheckbox) cloneChannelsCheckbox.checked = true;
             if (clonePermissionsCheckbox) clonePermissionsCheckbox.checked = true;
@@ -230,9 +237,11 @@
             if (cloneAttachmentsCheckbox) cloneAttachmentsCheckbox.checked = true;
             if (msgLimitInput) msgLimitInput.value = 25;
             if (limitBadge) limitBadge.textContent = '25';
+            if (msgDelayInput) msgDelayInput.value = 1000;
+            if (delayBadge) delayBadge.textContent = '1000ms';
             showToast('Applied preset: Complete Server Archive', 'warning');
         } else if (preset === 'roles-only') {
-            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = true;
+            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = false;
             if (cloneRolesCheckbox) cloneRolesCheckbox.checked = true;
             if (cloneChannelsCheckbox) cloneChannelsCheckbox.checked = false;
             if (clonePermissionsCheckbox) clonePermissionsCheckbox.checked = true;
@@ -458,8 +467,27 @@
     });
 
     // ==========================================================================
-    // 5. Migration Execution Flow
+    // 5. Migration Execution Flow & Preflight Plan Engine
     // ==========================================================================
+
+    function getPayload() {
+        return {
+            userToken: userTokenInput.value.trim(),
+            sourceId: sourceIdInput.value.trim(),
+            targetId: targetIdInput.value.trim(),
+            options: {
+                cleanTarget: cleanTargetCheckbox ? cleanTargetCheckbox.checked : false,
+                cloneRoles: cloneRolesCheckbox ? cloneRolesCheckbox.checked : true,
+                cloneChannels: cloneChannelsCheckbox ? cloneChannelsCheckbox.checked : true,
+                clonePermissions: clonePermissionsCheckbox ? clonePermissionsCheckbox.checked : true,
+                cloneProfile: cloneProfileCheckbox ? cloneProfileCheckbox.checked : true,
+                cloneMessages: cloneMessagesCheckbox ? cloneMessagesCheckbox.checked : false,
+                cloneAttachments: cloneMessagesCheckbox && cloneAttachmentsCheckbox ? (cloneMessagesCheckbox.checked && cloneAttachmentsCheckbox.checked) : false,
+                msgLimit: msgLimitInput ? (parseInt(msgLimitInput.value, 10) || 15) : 15,
+                msgDelay: msgDelayInput ? (parseInt(msgDelayInput.value, 10) || 1000) : 1000
+            }
+        };
+    }
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -493,10 +521,90 @@
             return;
         }
 
-        // Display Confirmation Modal
+        // Populate Confirmation Modal Initial State
         confirmSourceId.textContent = sourceId;
         confirmTargetId.textContent = targetId;
+
+        if (preflightStatusBadge) {
+            preflightStatusBadge.className = 'preflight-status-badge';
+            preflightStatusBadge.textContent = 'CHECKING...';
+        }
+        if (preflightSubText) {
+            preflightSubText.textContent = 'Querying guild accessibility & permissions...';
+        }
+        if (preflightChecksList) {
+            preflightChecksList.innerHTML = '<div class="preflight-check-item"><span class="preflight-check-icon info">⏳</span><span>Running preflight validation checks...</span></div>';
+        }
+
+        if (confirmCleanupAlert) {
+            if (cleanTargetCheckbox && cleanTargetCheckbox.checked) {
+                confirmCleanupAlert.classList.remove('hidden');
+            } else {
+                confirmCleanupAlert.classList.add('hidden');
+            }
+        }
+
+        if (proceedConfirmBtn) {
+            proceedConfirmBtn.disabled = true;
+            proceedConfirmBtn.textContent = 'Verifying...';
+        }
+
         openModal(confirmModal);
+
+        // Run Preflight Check
+        const payload = getPayload();
+        socket.emit('clone:preflight', payload);
+    });
+
+    socket.on('clone:preflight_result', (report) => {
+        if (!preflightChecksList || !preflightStatusBadge || !proceedConfirmBtn) return;
+
+        if (report.sourceGuildName) {
+            confirmSourceId.textContent = `${report.sourceGuildName} (${sourceIdInput.value.trim()})`;
+        }
+        if (report.targetGuildName) {
+            confirmTargetId.textContent = `${report.targetGuildName} (${targetIdInput.value.trim()})`;
+        }
+
+        if (report.status === 'BLOCKED' || !report.ready) {
+            preflightStatusBadge.className = 'preflight-status-badge blocked';
+            preflightStatusBadge.textContent = 'BLOCKED';
+            if (preflightSubText) preflightSubText.textContent = report.reason || report.error || 'Preflight checks failed';
+            proceedConfirmBtn.disabled = true;
+            proceedConfirmBtn.textContent = 'Cannot Proceed';
+        } else if (report.status === 'WARNING') {
+            preflightStatusBadge.className = 'preflight-status-badge warning';
+            preflightStatusBadge.textContent = 'READY WITH WARNINGS';
+            if (preflightSubText) preflightSubText.textContent = 'Review warnings before proceeding';
+            proceedConfirmBtn.disabled = false;
+            proceedConfirmBtn.textContent = 'I Understand, Start Migration';
+        } else {
+            preflightStatusBadge.className = 'preflight-status-badge';
+            preflightStatusBadge.textContent = 'READY';
+            if (preflightSubText) preflightSubText.textContent = 'All preflight checks passed';
+            proceedConfirmBtn.disabled = false;
+            proceedConfirmBtn.textContent = 'Start Migration';
+        }
+
+        if (Array.isArray(report.checks) && report.checks.length > 0) {
+            preflightChecksList.innerHTML = '';
+            report.checks.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'preflight-check-item';
+
+                const icon = document.createElement('span');
+                const st = (c.status || 'info').toLowerCase();
+                icon.className = `preflight-check-icon ${st}`;
+                icon.textContent = st === 'passed' ? '✓' : st === 'warning' ? '⚠' : st === 'blocked' ? '✕' : 'ℹ';
+
+                const text = document.createElement('span');
+                text.textContent = `${c.name}: ${c.detail}`;
+
+                item.appendChild(icon);
+                item.appendChild(text);
+                preflightChecksList.appendChild(item);
+            });
+        }
     });
 
     cancelConfirmBtn.addEventListener('click', () => {
@@ -509,22 +617,7 @@
     });
 
     function startCloningProcess() {
-        const payload = {
-            userToken: userTokenInput.value.trim(),
-            sourceId: sourceIdInput.value.trim(),
-            targetId: targetIdInput.value.trim(),
-            options: {
-                cleanTarget: cleanTargetCheckbox ? cleanTargetCheckbox.checked : true,
-                cloneRoles: cloneRolesCheckbox ? cloneRolesCheckbox.checked : true,
-                cloneChannels: cloneChannelsCheckbox ? cloneChannelsCheckbox.checked : true,
-                clonePermissions: clonePermissionsCheckbox ? clonePermissionsCheckbox.checked : true,
-                cloneProfile: cloneProfileCheckbox ? cloneProfileCheckbox.checked : true,
-                cloneMessages: cloneMessagesCheckbox ? cloneMessagesCheckbox.checked : false,
-                cloneAttachments: cloneMessagesCheckbox && cloneAttachmentsCheckbox ? (cloneMessagesCheckbox.checked && cloneAttachmentsCheckbox.checked) : false,
-                msgLimit: msgLimitInput ? (parseInt(msgLimitInput.value, 10) || 15) : 15,
-                msgDelay: msgDelayInput ? (parseInt(msgDelayInput.value, 10) || 500) : 500
-            }
-        };
+        const payload = getPayload();
 
         // Reset Counters
         statCounters = { roles: 0, channels: 0, categories: 0, messages: 0, warnings: 0 };
@@ -665,13 +758,30 @@
         const stats = payload.stats || payload || {};
         const durationSec = Math.round((stats.durationMs || (Date.now() - operationStartTime)) / 1000);
         if (statDuration) statDuration.textContent = `${durationSec}s`;
-        if (statRoles) statRoles.textContent = stats.rolesCreated ?? statCounters.roles;
-        if (statCategories) statCategories.textContent = stats.categoriesCreated ?? '-';
-        if (statChannels) statChannels.textContent = stats.channelsCreated ?? statCounters.channels;
+        if (statRoles) statRoles.textContent = stats.rolesCreated ?? stats.roles?.created ?? statCounters.roles;
+        if (statCategories) statCategories.textContent = stats.categoriesCreated ?? stats.categories?.created ?? '-';
+        if (statChannels) statChannels.textContent = stats.channelsCreated ?? stats.channels?.created ?? statCounters.channels;
         
+        if (statPermissions) {
+            const applied = stats.permissions?.applied ?? 0;
+            statPermissions.textContent = `${applied} applied`;
+        }
+
+        if (statCleanup) {
+            statCleanup.textContent = stats.cleanup?.status || (cleanTargetCheckbox && cleanTargetCheckbox.checked ? 'Executed' : 'Skipped');
+        }
+
+        if (statVerifyStatus) {
+            const vStatus = stats.status || stats.verification?.status || 'VERIFIED';
+            statVerifyStatus.textContent = vStatus.replace(/_/g, ' ');
+            statVerifyStatus.className = `verification-badge ${vStatus.toLowerCase()}`;
+        }
+
         if (statMessages) {
             if (cloneMessagesCheckbox && cloneMessagesCheckbox.checked) {
-                statMessages.textContent = stats.messagesCopied ?? stats.messagesCloned ?? statCounters.messages;
+                const msgCount = stats.messagesCopied ?? stats.messages?.copied ?? statCounters.messages;
+                const fileCount = stats.attachmentsCopied ?? stats.attachments?.copied ?? 0;
+                statMessages.textContent = `${msgCount} msgs (${fileCount} files)`;
             } else {
                 statMessages.textContent = 'Disabled';
             }

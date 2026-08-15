@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { validateClonePayload } from './services/validationService.js';
 import { executeClone } from './services/cloneService.js';
+import { runPreflightCheck } from './services/preflightService.js';
 import { createLogEntry, sanitizeText } from './utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -42,6 +43,36 @@ io.on('connection', (socket) => {
     socket.emit('system:ready', {
         serverTime: new Date().toISOString(),
         version: '2.0.0'
+    });
+
+    // Preflight Check Handler
+    socket.on('clone:preflight', async (data) => {
+        const validation = validateClonePayload(data);
+        if (!validation.valid) {
+            socket.emit('clone:preflight_result', {
+                ready: false,
+                status: 'BLOCKED',
+                error: validation.error,
+                code: validation.code
+            });
+            return;
+        }
+
+        try {
+            const report = await runPreflightCheck({
+                userToken: validation.userToken,
+                sourceId: validation.sourceId,
+                targetId: validation.targetId,
+                options: validation.options
+            });
+            socket.emit('clone:preflight_result', report);
+        } catch (err) {
+            socket.emit('clone:preflight_result', {
+                ready: false,
+                status: 'BLOCKED',
+                error: sanitizeText(err.message || 'Preflight check failed.')
+            });
+        }
     });
 
     // Start Clone Sequence handler (supports both new 'clone:start' and legacy 'start_clone')
