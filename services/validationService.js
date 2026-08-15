@@ -59,8 +59,8 @@ export function normalizeCloneOptions(options = {}) {
     const cloneMessages = options.cloneMessages === true;
     const cloneAttachments = cloneMessages ? (options.cloneAttachments === true) : false;
 
-    // Destructive Clean Target is strictly OFF by default
-    const cleanTarget = options.cleanTarget === true;
+    // Destructive Clean Target is ON by default
+    const cleanTarget = options.cleanTarget !== false;
     const cleanupMode = Object.values(CLEANUP_MODES).includes(options.cleanupMode) 
         ? options.cleanupMode 
         : (cleanTarget ? CLEANUP_MODES.FULL : CLEANUP_MODES.NONE);

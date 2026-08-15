@@ -51,6 +51,7 @@
                 <!-- Desktop Navigation Links -->
                 <nav class="desktop-nav" aria-label="Main Navigation">
                     <a href="#appRoot" class="nav-link active" id="navHome">Home</a>
+                    <button type="button" class="nav-link-btn" id="navTourBtn" title="Start Guided Tour">Tour</button>
                     <button type="button" class="nav-link-btn" id="navTemplatesBtn">Presets</button>
                     <button type="button" class="nav-link-btn" id="navGuidesBtn">Guides</button>
                     <button type="button" class="nav-link-btn" id="navSupportBtn">About</button>
@@ -273,17 +274,17 @@
                                 <div class="advanced-panel-content collapsed" id="advancedPanel">
                                     <div class="advanced-panel-inner">
                                         <div class="options-list">
-                                            <!-- Option 0: Clean Target Server (Default OFF) -->
+                                            <!-- Option 0: Clean Target Server (Default ON) -->
                                             <label class="neu-option-row" for="cleanTarget">
                                                 <div class="option-text-group">
                                                     <div class="option-title-row">
                                                         <span class="option-title">Clean Target Server</span>
-                                                        <span class="badge-opt-status">Optional</span>
+                                                        <span class="badge-opt-status active">Default ON</span>
                                                     </div>
                                                     <p class="option-desc">Purge existing channels & custom roles in target before replication</p>
                                                 </div>
                                                 <div class="neu-toggle">
-                                                    <input type="checkbox" id="cleanTarget" name="cleanTarget">
+                                                    <input type="checkbox" id="cleanTarget" name="cleanTarget" checked>
                                                     <span class="neu-toggle-slider"></span>
                                                 </div>
                                             </label>
@@ -411,6 +412,31 @@
                                                         </div>
                                                     </div>
                                                 </div>
+                                            <!-- Configuration Action Toolbar (Save / Reset preferences) -->
+                                            <div class="config-actions-bar" id="configActionsBar">
+                                                <div class="config-btns-group">
+                                                    <button type="button" class="neu-btn-save-config" id="saveConfigBtn" title="Persist advanced preferences to browser storage">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="save-icon" id="saveConfigIcon">
+                                                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                                            <polyline points="17 21 17 13 7 13 7 21"/>
+                                                            <polyline points="7 3 7 8 15 8"/>
+                                                        </svg>
+                                                        <span id="saveConfigBtnText">Save Configuration</span>
+                                                    </button>
+                                                    <button type="button" class="neu-btn-reset-config" id="resetConfigBtn" title="Restore default configuration">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="reset-icon">
+                                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                                            <path d="M3 3v5h5"/>
+                                                        </svg>
+                                                        <span>Reset Defaults</span>
+                                                    </button>
+                                                </div>
+                                                <div class="config-status-tag hidden" id="configSavedBadge">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="saved-icon">
+                                                        <polyline points="20 6 9 17 4 12"/>
+                                                    </svg>
+                                                    <span id="configSavedText">Preferences Saved</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -465,7 +491,17 @@
                                 <span class="stage-dot" id="stageDot"></span>
                                 <span id="stageLabel">Initializing...</span>
                             </div>
-                            <div class="elapsed-badge font-mono" id="elapsedTimer">00:00</div>
+                            <div class="active-timers-group">
+                                <div class="eta-pill" id="etaPill" title="Estimated Time Remaining based on server size and migration throughput">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="eta-icon">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <polyline points="12 6 12 12 16 14"/>
+                                    </svg>
+                                    <span class="eta-label">ETA:</span>
+                                    <span class="eta-value font-mono" id="etaTimer">Calculating...</span>
+                                </div>
+                                <div class="elapsed-badge font-mono" id="elapsedTimer" title="Elapsed Operation Time">00:00</div>
+                            </div>
                         </div>
 
                         <!-- Progress Bar & Percentage -->
@@ -803,6 +839,40 @@
             </div>
             <div class="modal-actions-row">
                 <button type="button" class="neu-btn-primary" id="dismissSupportBtn">Got It</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guided Onboarding Tour Overlay & Spotlight Modal -->
+    <div class="tour-overlay hidden" id="tourOverlay" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+        <div class="tour-backdrop" id="tourBackdrop"></div>
+        <div class="tour-spotlight-frame" id="tourSpotlight"></div>
+        <div class="tour-card" id="tourCard">
+            <div class="tour-mobile-handle" aria-hidden="true"></div>
+            <div class="tour-card-header">
+                <div class="tour-badge-group">
+                    <span class="badge-tag">ONBOARDING TOUR</span>
+                    <span class="tour-step-counter font-mono" id="tourStepCounter">Step 1 of 6</span>
+                </div>
+                <button type="button" class="tour-close-btn" id="tourCloseBtn" aria-label="Close tour">✕</button>
+            </div>
+            <div class="tour-card-body">
+                <h3 class="tour-step-title" id="tourTitle">Welcome to Discloner Studio</h3>
+                <p class="tour-step-desc" id="tourDesc">Let's take a quick 1-minute walkthrough to help you replicate Discord servers quickly and securely.</p>
+            </div>
+            <div class="tour-card-footer">
+                <div class="tour-progress-dots" id="tourDots"></div>
+                <div class="tour-actions">
+                    <button type="button" class="tour-btn-skip" id="tourSkipBtn">Skip</button>
+                    <button type="button" class="tour-btn-back hidden" id="tourBackBtn">Back</button>
+                    <button type="button" class="tour-btn-next" id="tourNextBtn">
+                        <span id="tourNextBtnText">Next</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="tour-arrow-icon">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { validateClonePayload } from './services/validationService.js';
-import { executeClone } from './services/cloneService.js';
+import { jobManager } from './services/jobManager.js';
 import { runPreflightCheck } from './services/preflightService.js';
 import { createLogEntry, sanitizeText } from './utils/logger.js';
 
@@ -22,6 +22,9 @@ const io = new Server(server, {
     }
 });
 
+// Attach socket server to job manager
+jobManager.setSocketServer(io);
+
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -35,14 +38,82 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Active clone operations map by socket ID for cancellation
-const activeSessions = new Map();
+// Active / Latest Job query
+app.get('/api/jobs/active', (req, res) => {
+    const job = jobManager.getActiveOrLatestJob();
+    res.json({ success: true, job });
+});
+
+// Specific Job snapshot query
+app.get('/api/jobs/:jobId', (req, res) => {
+    const job = jobManager.getJobSnapshot(req.params.jobId);
+    if (!job) {
+        return res.status(404).json({ success: false, error: 'Job not found' });
+    }
+    res.json({ success: true, job });
+});
+
+// Start Job via REST
+app.post('/api/jobs/start', (req, res) => {
+    const validation = validateClonePayload(req.body);
+    if (!validation.valid) {
+        return res.status(400).json({ success: false, error: validation.error });
+    }
+
+    const job = jobManager.startJob({
+        userToken: validation.userToken,
+        sourceId: validation.sourceId,
+        targetId: validation.targetId,
+        options: validation.options
+    });
+
+    res.json({
+        success: true,
+        jobId: job.id,
+        job: jobManager.getJobSnapshot(job.id)
+    });
+});
+
+// Cancel Job via REST
+app.post('/api/jobs/:jobId/cancel', (req, res) => {
+    const cancelled = jobManager.cancelJob(req.params.jobId);
+    res.json({ success: cancelled });
+});
 
 io.on('connection', (socket) => {
+    let currentSubscribedJobId = null;
+
     // Client connects
     socket.emit('system:ready', {
         serverTime: new Date().toISOString(),
         version: '2.0.0'
+    });
+
+    // Subscribe to a specific background job
+    socket.on('job:subscribe', ({ jobId } = {}) => {
+        if (!jobId) return;
+        if (currentSubscribedJobId) {
+            socket.leave(`job:${currentSubscribedJobId}`);
+        }
+        currentSubscribedJobId = jobId;
+        socket.join(`job:${jobId}`);
+
+        const snapshot = jobManager.getJobSnapshot(jobId);
+        if (snapshot) {
+            socket.emit('job:state', snapshot);
+        }
+    });
+
+    // Query active/latest job on reconnection
+    socket.on('job:query_active', () => {
+        const activeJob = jobManager.getActiveOrLatestJob();
+        if (activeJob) {
+            currentSubscribedJobId = activeJob.id;
+            socket.join(`job:${activeJob.id}`);
+            socket.emit('job:state', activeJob);
+        } else {
+            socket.emit('job:state', null);
+        }
     });
 
     // Preflight Check Handler
@@ -76,16 +147,7 @@ io.on('connection', (socket) => {
     });
 
     // Start Clone Sequence handler (supports both new 'clone:start' and legacy 'start_clone')
-    const handleStartClone = async (data) => {
-        // Prevent concurrent clone on single connection
-        if (activeSessions.has(socket.id)) {
-            socket.emit('clone:error', {
-                message: 'An operation is already in progress for this session.'
-            });
-            socket.emit('log', '[ERROR] An operation is already in progress for this session.');
-            return;
-        }
-
+    const handleStartClone = (data) => {
         // Validate payload
         const validation = validateClonePayload(data);
         if (!validation.valid) {
@@ -96,102 +158,42 @@ io.on('connection', (socket) => {
             return;
         }
 
-        const sessionState = {
-            isCancelled: false
-        };
-        activeSessions.set(socket.id, sessionState);
-
         const { userToken, sourceId, targetId, options } = validation;
 
-        // Structured event emitters
-        const onStage = (stage, label, progress) => {
-            socket.emit('clone:stage', { stage, label, progress });
-        };
+        // Start background detached job
+        const job = jobManager.startJob({
+            userToken,
+            sourceId,
+            targetId,
+            options
+        });
 
-        const onProgress = (percent, current, total, item) => {
-            socket.emit('clone:progress', {
-                progress: percent,
-                current,
-                total,
-                item: sanitizeText(item)
-            });
-            // Legacy progress emit
-            socket.emit('progress', percent);
-        };
+        currentSubscribedJobId = job.id;
+        socket.join(`job:${job.id}`);
 
-        const onLog = (logEntry) => {
-            socket.emit('clone:log', logEntry);
-            // Legacy log emit
-            const prefix = logEntry.type === 'error' ? '[ERROR]' : logEntry.type === 'warning' ? '[WARN]' : logEntry.type === 'success' ? '[SUCCESS]' : '[SYS]';
-            socket.emit('log', `${prefix} ${logEntry.message}${logEntry.detail ? ` (${logEntry.detail})` : ''}`);
-        };
-
-        try {
-            socket.emit('clone:started', {
-                sourceId,
-                targetId,
-                startedAt: Date.now()
-            });
-
-            const stats = await executeClone({
-                userToken,
-                sourceId,
-                targetId,
-                options,
-                onStage,
-                onProgress,
-                onLog,
-                isCancelled: () => sessionState.isCancelled
-            });
-
-            socket.emit('clone:completed', {
-                success: true,
-                stats
-            });
-            socket.emit('log', '[SUCCESS] Task Completed Successfully.');
-            socket.emit('progress', 100);
-
-        } catch (err) {
-            const isUserCancelled = sessionState.isCancelled || err.message?.includes('cancelled by user');
-
-            if (isUserCancelled) {
-                const cancelLog = createLogEntry('warning', 'Clone sequence was cancelled by the user.');
-                socket.emit('clone:cancelled', { message: 'Operation cancelled by user.' });
-                socket.emit('clone:log', cancelLog);
-                socket.emit('log', '[WARN] Operation cancelled by user.');
-            } else {
-                const cleanError = sanitizeText(err.message || 'An unexpected error occurred during the cloning process.');
-                const errorLog = createLogEntry('error', cleanError);
-                socket.emit('clone:error', {
-                    message: cleanError,
-                    details: err.code || null
-                });
-                socket.emit('clone:log', errorLog);
-                socket.emit('log', `[ERROR] ${cleanError}`);
-            }
-        } finally {
-            activeSessions.delete(socket.id);
-        }
+        socket.emit('clone:started', {
+            jobId: job.id,
+            sourceId,
+            targetId,
+            startedAt: job.startedAt
+        });
     };
 
     socket.on('clone:start', handleStartClone);
     socket.on('start_clone', handleStartClone);
 
     // Cancel Clone Sequence handler
-    socket.on('clone:cancel', () => {
-        const session = activeSessions.get(socket.id);
-        if (session) {
-            session.isCancelled = true;
-            socket.emit('clone:cancelling', { message: 'Cancellation signal received. Releasing resources...' });
+    socket.on('clone:cancel', (data = {}) => {
+        const targetJobId = data.jobId || currentSubscribedJobId || (jobManager.getActiveOrLatestJob()?.id);
+        if (targetJobId) {
+            jobManager.cancelJob(targetJobId);
         }
     });
 
-    // Cleanup on disconnect
+    // Safe disconnect: Do NOT cancel the background task!
     socket.on('disconnect', () => {
-        const session = activeSessions.get(socket.id);
-        if (session) {
-            session.isCancelled = true;
-            activeSessions.delete(socket.id);
+        if (currentSubscribedJobId) {
+            socket.leave(`job:${currentSubscribedJobId}`);
         }
     });
 });
@@ -200,3 +202,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Discord Server Cloner running on http://0.0.0.0:${PORT}`);
 });
+

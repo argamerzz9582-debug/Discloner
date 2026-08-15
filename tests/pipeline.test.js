@@ -46,7 +46,7 @@ test('CleanerPolicy safely protects default and managed entities', () => {
 });
 
 test('DEFAULT_CONFIG enforces product defaults', () => {
-    assert.equal(DEFAULT_CONFIG.cleanTarget, false);
+    assert.equal(DEFAULT_CONFIG.cleanTarget, true);
     assert.equal(DEFAULT_CONFIG.cloneMessages, false);
     assert.equal(DEFAULT_CONFIG.cloneAttachments, false);
     assert.equal(DEFAULT_CONFIG.msgLimit, 15);

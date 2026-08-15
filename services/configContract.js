@@ -14,9 +14,9 @@ export const DEFAULT_CONFIG = Object.freeze({
     cloneMessages: false,
     cloneAttachments: false,
 
-    // Destructive cleanup (Explicitly OFF by default)
-    cleanTarget: false,
-    cleanupMode: 'none', // 'none' | 'managed' | 'matching' | 'full'
+    // Destructive cleanup (Default ON)
+    cleanTarget: true,
+    cleanupMode: 'full', // 'none' | 'managed' | 'matching' | 'full'
 
     // Message tuning defaults
     msgLimit: 15,

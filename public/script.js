@@ -11,6 +11,7 @@
     // DOM Elements - Theme & Navigation
     const htmlElement = document.documentElement;
     const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const navTourBtn = document.getElementById('navTourBtn');
     const navTemplatesBtn = document.getElementById('navTemplatesBtn');
     const navGuidesBtn = document.getElementById('navGuidesBtn');
     const navSupportBtn = document.getElementById('navSupportBtn');
@@ -44,6 +45,14 @@
     const limitBadge = document.getElementById('limitBadge');
     const delayBadge = document.getElementById('delayBadge');
 
+    // Configuration Toolbar
+    const saveConfigBtn = document.getElementById('saveConfigBtn');
+    const saveConfigBtnText = document.getElementById('saveConfigBtnText');
+    const saveConfigIcon = document.getElementById('saveConfigIcon');
+    const resetConfigBtn = document.getElementById('resetConfigBtn');
+    const configSavedBadge = document.getElementById('configSavedBadge');
+    const configSavedText = document.getElementById('configSavedText');
+
     // Accordion
     const advancedToggleBtn = document.getElementById('advancedToggleBtn');
     const advancedPanel = document.getElementById('advancedPanel');
@@ -63,11 +72,28 @@
     const stageDot = document.getElementById('stageDot');
     const stageLabel = document.getElementById('stageLabel');
     const elapsedTimer = document.getElementById('elapsedTimer');
+    const etaPill = document.getElementById('etaPill');
+    const etaTimer = document.getElementById('etaTimer');
     const progressBar = document.getElementById('progressBar');
     const progressText = document.getElementById('progressText');
     const progressTrack = document.getElementById('progressTrack');
     const progressItemDetail = document.getElementById('progressItemDetail');
     const progressCounts = document.getElementById('progressCounts');
+
+    // Onboarding Tour Elements
+    const tourOverlay = document.getElementById('tourOverlay');
+    const tourBackdrop = document.getElementById('tourBackdrop');
+    const tourSpotlight = document.getElementById('tourSpotlight');
+    const tourCard = document.getElementById('tourCard');
+    const tourTitle = document.getElementById('tourTitle');
+    const tourDesc = document.getElementById('tourDesc');
+    const tourStepCounter = document.getElementById('tourStepCounter');
+    const tourDots = document.getElementById('tourDots');
+    const tourCloseBtn = document.getElementById('tourCloseBtn');
+    const tourSkipBtn = document.getElementById('tourSkipBtn');
+    const tourBackBtn = document.getElementById('tourBackBtn');
+    const tourNextBtn = document.getElementById('tourNextBtn');
+    const tourNextBtnText = document.getElementById('tourNextBtnText');
 
     // Live Stats
     const liveStatRoles = document.getElementById('liveStatRoles');
@@ -132,6 +158,7 @@
     let searchQuery = '';
     let isAutoScrollLocked = true;
     let unreadLogsCount = 0;
+    let currentJobId = null;
     const MAX_DOM_LOGS = 600;
 
     let statCounters = {
@@ -141,6 +168,11 @@
         messages: 0,
         warnings: 0
     };
+
+    // Load active job ID from localStorage if exists
+    try {
+        currentJobId = localStorage.getItem('discloner_active_job_id');
+    } catch (e) {}
 
     // ==========================================================================
     // 1. Theme Engine & Persistence
@@ -218,7 +250,7 @@
 
     function applyPreset(preset) {
         if (preset === 'standard') {
-            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = false;
+            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = true;
             if (cloneRolesCheckbox) cloneRolesCheckbox.checked = true;
             if (cloneChannelsCheckbox) cloneChannelsCheckbox.checked = true;
             if (clonePermissionsCheckbox) clonePermissionsCheckbox.checked = true;
@@ -227,7 +259,7 @@
             syncMessageOptionUI();
             showToast('Applied preset: Full Server Architecture', 'info');
         } else if (preset === 'complete-archive') {
-            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = false;
+            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = true;
             if (cloneRolesCheckbox) cloneRolesCheckbox.checked = true;
             if (cloneChannelsCheckbox) cloneChannelsCheckbox.checked = true;
             if (clonePermissionsCheckbox) clonePermissionsCheckbox.checked = true;
@@ -241,7 +273,7 @@
             if (delayBadge) delayBadge.textContent = '1000ms';
             showToast('Applied preset: Complete Server Archive', 'warning');
         } else if (preset === 'roles-only') {
-            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = false;
+            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = true;
             if (cloneRolesCheckbox) cloneRolesCheckbox.checked = true;
             if (cloneChannelsCheckbox) cloneChannelsCheckbox.checked = false;
             if (clonePermissionsCheckbox) clonePermissionsCheckbox.checked = true;
@@ -450,7 +482,425 @@
     }
 
     // ==========================================================================
-    // 4. Socket Connection & Status
+    // 4. Configuration Persistence Engine (localStorage)
+    // ==========================================================================
+    const CONFIG_STORAGE_KEY = 'discloner_user_config';
+
+    function saveUserConfiguration() {
+        const config = {
+            cleanTarget: cleanTargetCheckbox ? cleanTargetCheckbox.checked : true,
+            cloneRoles: cloneRolesCheckbox ? cloneRolesCheckbox.checked : true,
+            cloneChannels: cloneChannelsCheckbox ? cloneChannelsCheckbox.checked : true,
+            clonePermissions: clonePermissionsCheckbox ? clonePermissionsCheckbox.checked : true,
+            cloneProfile: cloneProfileCheckbox ? cloneProfileCheckbox.checked : true,
+            cloneMessages: cloneMessagesCheckbox ? cloneMessagesCheckbox.checked : false,
+            cloneAttachments: cloneAttachmentsCheckbox ? cloneAttachmentsCheckbox.checked : false,
+            msgLimit: msgLimitInput ? (parseInt(msgLimitInput.value, 10) || 15) : 15,
+            msgDelay: msgDelayInput ? (parseInt(msgDelayInput.value, 10) || 1000) : 1000,
+            savedAt: Date.now()
+        };
+
+        try {
+            localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+
+            if (saveConfigBtn) saveConfigBtn.classList.add('saved-state');
+            if (saveConfigBtnText) saveConfigBtnText.textContent = 'Saved!';
+            if (configSavedBadge) configSavedBadge.classList.remove('hidden');
+            if (configSavedText) configSavedText.textContent = 'Saved Preferences Active';
+
+            showToast('Advanced configuration saved to browser storage!', 'success');
+
+            setTimeout(() => {
+                if (saveConfigBtn) saveConfigBtn.classList.remove('saved-state');
+                if (saveConfigBtnText) saveConfigBtnText.textContent = 'Save Configuration';
+            }, 2200);
+        } catch (err) {
+            showToast('Unable to persist configuration preferences.', 'error');
+        }
+    }
+
+    function loadUserConfiguration() {
+        try {
+            const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+            if (!raw) return false;
+
+            const config = JSON.parse(raw);
+            if (!config || typeof config !== 'object') return false;
+
+            if (cleanTargetCheckbox && typeof config.cleanTarget === 'boolean') {
+                cleanTargetCheckbox.checked = config.cleanTarget;
+            }
+            if (cloneRolesCheckbox && typeof config.cloneRoles === 'boolean') {
+                cloneRolesCheckbox.checked = config.cloneRoles;
+            }
+            if (cloneChannelsCheckbox && typeof config.cloneChannels === 'boolean') {
+                cloneChannelsCheckbox.checked = config.cloneChannels;
+            }
+            if (clonePermissionsCheckbox && typeof config.clonePermissions === 'boolean') {
+                clonePermissionsCheckbox.checked = config.clonePermissions;
+            }
+            if (cloneProfileCheckbox && typeof config.cloneProfile === 'boolean') {
+                cloneProfileCheckbox.checked = config.cloneProfile;
+            }
+            if (cloneMessagesCheckbox && typeof config.cloneMessages === 'boolean') {
+                cloneMessagesCheckbox.checked = config.cloneMessages;
+            }
+            if (cloneAttachmentsCheckbox && typeof config.cloneAttachments === 'boolean') {
+                cloneAttachmentsCheckbox.checked = config.cloneAttachments;
+            }
+            if (msgLimitInput && config.msgLimit) {
+                msgLimitInput.value = config.msgLimit;
+                if (limitBadge) limitBadge.textContent = config.msgLimit;
+            }
+            if (msgDelayInput && config.msgDelay) {
+                msgDelayInput.value = config.msgDelay;
+                if (delayBadge) delayBadge.textContent = `${config.msgDelay}ms`;
+            }
+
+            syncMessageOptionUI();
+
+            if (configSavedBadge) {
+                configSavedBadge.classList.remove('hidden');
+                if (configSavedText) configSavedText.textContent = 'Saved Preferences Active';
+            }
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function resetUserConfiguration() {
+        if (cleanTargetCheckbox) cleanTargetCheckbox.checked = true;
+        if (cloneRolesCheckbox) cloneRolesCheckbox.checked = true;
+        if (cloneChannelsCheckbox) cloneChannelsCheckbox.checked = true;
+        if (clonePermissionsCheckbox) clonePermissionsCheckbox.checked = true;
+        if (cloneProfileCheckbox) cloneProfileCheckbox.checked = true;
+        if (cloneMessagesCheckbox) cloneMessagesCheckbox.checked = false;
+        if (cloneAttachmentsCheckbox) cloneAttachmentsCheckbox.checked = false;
+        if (msgLimitInput) {
+            msgLimitInput.value = 15;
+            if (limitBadge) limitBadge.textContent = '15';
+        }
+        if (msgDelayInput) {
+            msgDelayInput.value = 1000;
+            if (delayBadge) delayBadge.textContent = '1000ms';
+        }
+
+        syncMessageOptionUI();
+
+        try {
+            localStorage.removeItem(CONFIG_STORAGE_KEY);
+        } catch (e) {}
+
+        if (configSavedBadge) configSavedBadge.classList.add('hidden');
+        showToast('Restored default configuration settings.', 'info');
+    }
+
+    if (saveConfigBtn) {
+        saveConfigBtn.addEventListener('click', saveUserConfiguration);
+    }
+    if (resetConfigBtn) {
+        resetConfigBtn.addEventListener('click', resetUserConfiguration);
+    }
+
+    // Load persisted settings on startup
+    loadUserConfiguration();
+
+    // ==========================================================================
+    // 5. Guided Onboarding Tour Engine
+    // ==========================================================================
+    const TOUR_STORAGE_KEY = 'discloner_tour_completed';
+
+    const TOUR_STEPS = [
+        {
+            targetSelector: '#userToken',
+            fallbackSelector: '.form-group:first-of-type',
+            title: '1. Discord User Token',
+            desc: 'Provide your personal Discord authorization token. Tokens are processed ephemerally in-memory and are never stored or logged.',
+            preferredPos: 'bottom'
+        },
+        {
+            targetSelector: '.routing-layout',
+            fallbackSelector: '#sourceId',
+            title: '2. Source & Target Routing',
+            desc: 'Specify the Source Guild ID to replicate, and your fresh Target Guild ID where structure and assets will be created.',
+            preferredPos: 'bottom'
+        },
+        {
+            targetSelector: '#advancedToggleBtn',
+            fallbackSelector: '.advanced-accordion-section',
+            title: '3. Advanced Configuration',
+            desc: 'Toggle options to clean the target server, replicate custom roles, channels & categories, role permissions, server icons, and recent message history.',
+            preferredPos: 'bottom',
+            onEnter: () => {
+                if (advancedPanel && advancedPanel.classList.contains('collapsed')) {
+                    advancedPanel.classList.remove('collapsed');
+                    if (advancedToggleBtn) advancedToggleBtn.setAttribute('aria-expanded', 'true');
+                    if (advancedChevron) advancedChevron.style.transform = 'rotate(90deg)';
+                }
+            }
+        },
+        {
+            targetSelector: '#configActionsBar',
+            fallbackSelector: '#saveConfigBtn',
+            title: '4. Save Configuration',
+            desc: 'Click "Save Configuration" to persist your customized options (excluding tokens) to local storage so you don\'t have to re-select preferences every visit.',
+            preferredPos: 'top',
+            onEnter: () => {
+                if (advancedPanel && advancedPanel.classList.contains('collapsed')) {
+                    advancedPanel.classList.remove('collapsed');
+                }
+            }
+        },
+        {
+            targetSelector: '#startBtn',
+            fallbackSelector: '.cta-actions-group',
+            title: '5. Detached Background Engine',
+            desc: 'Click "START CLONING" to begin! Migrations run detached in the background on the server — feel free to close the tab or browser anytime.',
+            preferredPos: 'top'
+        },
+        {
+            targetSelector: '#progressCard',
+            fallbackSelector: '#consoleCard',
+            title: '6. Telemetry & Real-Time Console',
+            desc: 'Monitor dynamic Estimated Time Remaining (ETA), progress percentages, real-time entity counters, and search-filterable streaming logs.',
+            preferredPos: 'left'
+        }
+    ];
+
+    let currentTourStep = 0;
+    let isTourActive = false;
+
+    function renderTourDots() {
+        if (!tourDots) return;
+        tourDots.innerHTML = '';
+        TOUR_STEPS.forEach((_, idx) => {
+            const dot = document.createElement('span');
+            dot.className = `tour-step-dot ${idx === currentTourStep ? 'active' : (idx < currentTourStep ? 'completed' : '')}`;
+            tourDots.appendChild(dot);
+        });
+    }
+
+    function startTour() {
+        currentTourStep = 0;
+        isTourActive = true;
+        if (tourOverlay) tourOverlay.classList.remove('hidden');
+        showTourStep(0);
+    }
+
+    function showTourStep(index) {
+        if (index < 0 || index >= TOUR_STEPS.length) return;
+        currentTourStep = index;
+
+        const step = TOUR_STEPS[index];
+        if (typeof step.onEnter === 'function') {
+            step.onEnter();
+        }
+
+        if (tourTitle) tourTitle.textContent = step.title;
+        if (tourDesc) tourDesc.textContent = step.desc;
+        if (tourStepCounter) tourStepCounter.textContent = `Step ${index + 1} of ${TOUR_STEPS.length}`;
+
+        if (tourBackBtn) {
+            if (index === 0) {
+                tourBackBtn.classList.add('hidden');
+            } else {
+                tourBackBtn.classList.remove('hidden');
+            }
+        }
+
+        if (tourNextBtnText) {
+            tourNextBtnText.textContent = (index === TOUR_STEPS.length - 1) ? 'Finish Tour' : 'Next';
+        }
+
+        renderTourDots();
+
+        setTimeout(() => {
+            positionTourElements(step);
+        }, 50);
+    }
+
+    function positionTourElements(step) {
+        if (!isTourActive) return;
+
+        let target = document.querySelector(step.targetSelector);
+        if (!target && step.fallbackSelector) {
+            target = document.querySelector(step.fallbackSelector);
+        }
+        if (!target) target = document.getElementById('migrationSetupCard') || document.body;
+
+        const isMobile = window.innerWidth <= 768;
+
+        // On mobile, scroll so target is positioned in the upper portion of screen above the bottom card
+        if (isMobile) {
+            const elemRect = target.getBoundingClientRect();
+            const absTop = elemRect.top + window.scrollY;
+            const mobileOffset = Math.max(0, absTop - Math.max(80, window.innerHeight * 0.22));
+            try {
+                window.scrollTo({ top: mobileOffset, behavior: 'smooth' });
+            } catch (e) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        } else {
+            try {
+                target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+            } catch (e) {}
+        }
+
+        const rect = target.getBoundingClientRect();
+        const pad = isMobile ? 4 : 6;
+
+        if (tourSpotlight) {
+            const spotlightLeft = Math.max(4, rect.left - pad + window.scrollX);
+            const spotlightWidth = Math.min(window.innerWidth - 8, rect.width + (pad * 2));
+            tourSpotlight.style.top = `${Math.max(0, rect.top - pad + window.scrollY)}px`;
+            tourSpotlight.style.left = `${spotlightLeft}px`;
+            tourSpotlight.style.width = `${spotlightWidth}px`;
+            tourSpotlight.style.height = `${rect.height + (pad * 2)}px`;
+        }
+
+        if (!tourCard) return;
+
+        if (isMobile) {
+            // Mobile layout is controlled cleanly by CSS fixed bottom sheet
+            tourCard.style.top = '';
+            tourCard.style.left = '';
+            return;
+        }
+
+        const cardWidth = 360;
+        const cardHeight = tourCard.offsetHeight || 220;
+        const margin = 14;
+
+        let top = 0;
+        let left = 0;
+
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const pref = step.preferredPos || 'bottom';
+
+        if (pref === 'left' && rect.left > cardWidth + 24) {
+            top = rect.top + window.scrollY;
+            left = rect.left - cardWidth - margin + window.scrollX;
+        } else if (pref === 'top' && spaceAbove > cardHeight + 20) {
+            top = rect.top - cardHeight - margin + window.scrollY;
+            left = Math.min(window.innerWidth - cardWidth - 20, Math.max(16, rect.left + window.scrollX));
+        } else if (spaceBelow > cardHeight + 20 || pref === 'bottom') {
+            top = rect.bottom + margin + window.scrollY;
+            left = Math.min(window.innerWidth - cardWidth - 20, Math.max(16, rect.left + window.scrollX));
+        } else {
+            top = Math.max(20, rect.top - cardHeight - margin + window.scrollY);
+            left = Math.min(window.innerWidth - cardWidth - 20, Math.max(16, rect.left + window.scrollX));
+        }
+
+        tourCard.style.top = `${Math.max(10, top)}px`;
+        tourCard.style.left = `${Math.max(10, left)}px`;
+    }
+
+    function handleTourReposition() {
+        if (!isTourActive) return;
+        const step = TOUR_STEPS[currentTourStep];
+        if (step) positionTourElements(step);
+    }
+
+    function nextTourStep() {
+        if (currentTourStep < TOUR_STEPS.length - 1) {
+            showTourStep(currentTourStep + 1);
+        } else {
+            endTour(true);
+        }
+    }
+
+    function prevTourStep() {
+        if (currentTourStep > 0) {
+            showTourStep(currentTourStep - 1);
+        }
+    }
+
+    function endTour(completed = false) {
+        isTourActive = false;
+        if (tourOverlay) tourOverlay.classList.add('hidden');
+        if (completed) {
+            try {
+                localStorage.setItem(TOUR_STORAGE_KEY, 'true');
+            } catch (e) {}
+            showToast('Onboarding tour finished! You\'re ready to clone.', 'success');
+        }
+    }
+
+    // Touch Swipe Gesture Support for Mobile
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+
+    if (tourCard) {
+        tourCard.addEventListener('touchstart', (e) => {
+            if (!isTourActive || !e.changedTouches || !e.changedTouches[0]) return;
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        tourCard.addEventListener('touchend', (e) => {
+            if (!isTourActive || !e.changedTouches || !e.changedTouches[0]) return;
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleTourSwipeGesture();
+        }, { passive: true });
+    }
+
+    function handleTourSwipeGesture() {
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+        // Check for predominately horizontal swipe > 45px
+        if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.4) {
+            if (diffX < 0) {
+                // Swipe Left -> Next
+                nextTourStep();
+            } else {
+                // Swipe Right -> Prev
+                prevTourStep();
+            }
+        }
+    }
+
+    if (navTourBtn) {
+        navTourBtn.addEventListener('click', () => startTour());
+    }
+    if (tourCloseBtn) tourCloseBtn.addEventListener('click', () => endTour(false));
+    if (tourSkipBtn) tourSkipBtn.addEventListener('click', () => endTour(true));
+    if (tourBackBtn) tourBackBtn.addEventListener('click', () => prevTourStep());
+    if (tourNextBtn) tourNextBtn.addEventListener('click', () => nextTourStep());
+    if (tourBackdrop) tourBackdrop.addEventListener('click', () => endTour(false));
+
+    window.addEventListener('resize', handleTourReposition);
+    window.addEventListener('scroll', handleTourReposition, { passive: true });
+
+    document.addEventListener('keydown', (e) => {
+        if (!isTourActive) return;
+        if (e.key === 'Escape') {
+            endTour(false);
+        } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
+            nextTourStep();
+        } else if (e.key === 'ArrowLeft') {
+            prevTourStep();
+        }
+    });
+
+    // First time visitor detection: launch onboarding tour
+    try {
+        const tourDone = localStorage.getItem(TOUR_STORAGE_KEY);
+        if (tourDone !== 'true' && !currentJobId) {
+            setTimeout(() => {
+                if (!isRunning && !currentJobId) {
+                    startTour();
+                }
+            }, 900);
+        }
+    } catch (e) {}
+
+    // ==========================================================================
+    // 6. Socket Connection & Status
     // ==========================================================================
 
     socket.on('connect', () => {
@@ -476,7 +926,7 @@
             sourceId: sourceIdInput.value.trim(),
             targetId: targetIdInput.value.trim(),
             options: {
-                cleanTarget: cleanTargetCheckbox ? cleanTargetCheckbox.checked : false,
+                cleanTarget: cleanTargetCheckbox ? cleanTargetCheckbox.checked : true,
                 cloneRoles: cloneRolesCheckbox ? cloneRolesCheckbox.checked : true,
                 cloneChannels: cloneChannelsCheckbox ? cloneChannelsCheckbox.checked : true,
                 clonePermissions: clonePermissionsCheckbox ? clonePermissionsCheckbox.checked : true,
@@ -626,7 +1076,7 @@
         // Switch to Running State
         setRunningState(true);
         clearLogs();
-        appendLog('info', `Initiating migration sequence [Source: ${payload.sourceId} → Target: ${payload.targetId}]`, 'START');
+        appendLog('info', `Initiating background migration sequence [Source: ${payload.sourceId} → Target: ${payload.targetId}]`, 'START');
 
         socket.emit('clone:start', payload);
     }
@@ -634,8 +1084,8 @@
     if (cancelBtn) {
         cancelBtn.addEventListener('click', () => {
             if (!isRunning) return;
-            appendLog('warning', 'Sending cancellation signal to cloner engine...', 'CANCEL_REQ');
-            socket.emit('clone:cancel');
+            appendLog('warning', 'Sending cancellation signal to background cloner engine...', 'CANCEL_REQ');
+            socket.emit('clone:cancel', { jobId: currentJobId });
         });
     }
 
@@ -651,7 +1101,9 @@
             
             setFormDisabled(true);
 
-            operationStartTime = Date.now();
+            if (!operationStartTime) {
+                operationStartTime = Date.now();
+            }
             if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(updateElapsedTimer, 1000);
             updateElapsedTimer();
@@ -689,12 +1141,162 @@
         if (msgDelayInput) msgDelayInput.disabled = disabled;
     }
 
+    // ==========================================================================
+    // Estimated Time Remaining (ETA) Calculator & Benchmark Engine
+    // ==========================================================================
+    let etaSmoothedSeconds = null;
+    let lastEtaSampleTs = null;
+
+    function loadHistoricalSpeed() {
+        try {
+            const stored = localStorage.getItem('discloner_historical_speed');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed && typeof parsed.avgSecPerChannel === 'number') {
+                    return parsed;
+                }
+            }
+        } catch (e) {}
+        return {
+            avgSecPerChannel: 1.15,
+            avgSecPerRole: 0.9,
+            cleanSecTarget: 8,
+            runsCount: 1
+        };
+    }
+
+    function saveHistoricalSpeed(durationMs, totalItems = 25) {
+        if (!durationMs || durationMs < 2000) return;
+        try {
+            const totalSecs = durationMs / 1000;
+            const currentBench = loadHistoricalSpeed();
+            const runs = Math.min(10, (currentBench.runsCount || 1) + 1);
+            const weight = 1 / runs;
+            
+            const estSecPerItem = Math.max(0.35, Math.min(3.5, totalSecs / Math.max(8, totalItems)));
+            const newAvg = (currentBench.avgSecPerChannel * (1 - weight)) + (estSecPerItem * weight);
+
+            const updated = {
+                avgSecPerChannel: parseFloat(newAvg.toFixed(2)),
+                avgSecPerRole: parseFloat((newAvg * 0.8).toFixed(2)),
+                cleanSecTarget: parseFloat((newAvg * 6).toFixed(1)),
+                runsCount: runs
+            };
+            localStorage.setItem('discloner_historical_speed', JSON.stringify(updated));
+        } catch (e) {}
+    }
+
+    function computeBaselineTotalSeconds() {
+        const bench = loadHistoricalSpeed();
+        const isClean = cleanTargetCheckbox ? cleanTargetCheckbox.checked : true;
+        const isRoles = cloneRolesCheckbox ? cloneRolesCheckbox.checked : true;
+        const isChannels = cloneChannelsCheckbox ? cloneChannelsCheckbox.checked : true;
+        const isMessages = cloneMessagesCheckbox ? cloneMessagesCheckbox.checked : false;
+        const isPermissions = clonePermissionsCheckbox ? clonePermissionsCheckbox.checked : true;
+        const msgLimit = msgLimitInput ? (parseInt(msgLimitInput.value, 10) || 15) : 15;
+        const msgDelay = msgDelayInput ? (parseInt(msgDelayInput.value, 10) || 1000) : 1000;
+
+        let baseSec = 3.5;
+        if (isClean) baseSec += bench.cleanSecTarget;
+        if (isRoles) baseSec += (10 * bench.avgSecPerRole);
+        if (isChannels) baseSec += (16 * bench.avgSecPerChannel);
+        if (isPermissions) baseSec += 3;
+        if (isMessages) {
+            const channelSample = 6;
+            const msgTime = channelSample * msgLimit * (msgDelay / 1000);
+            baseSec += msgTime;
+        }
+        return Math.max(8, Math.round(baseSec));
+    }
+
+    function resetEtaCalculation() {
+        const baseline = computeBaselineTotalSeconds();
+        etaSmoothedSeconds = baseline;
+        lastEtaSampleTs = Date.now();
+        renderEtaDisplay(etaSmoothedSeconds);
+    }
+
+    function updateEtaProgress(percent, current, total, stageName) {
+        if (!isRunning || !operationStartTime) return;
+
+        const elapsedSec = (Date.now() - operationStartTime) / 1000;
+        
+        if (percent >= 100) {
+            etaSmoothedSeconds = 0;
+            renderEtaDisplay(0);
+            return;
+        }
+
+        let calculatedRemainingSec = null;
+
+        if (percent >= 3 && elapsedSec >= 1.5) {
+            const projectedTotalSec = elapsedSec / (percent / 100);
+            const empiricalRem = Math.max(1, projectedTotalSec - elapsedSec);
+
+            let itemBasedRem = empiricalRem;
+            if (current !== undefined && total !== undefined && total > 0 && current > 0) {
+                const secPerItem = Math.max(0.2, elapsedSec / current);
+                const remainingInStage = (total - current) * secPerItem;
+                itemBasedRem = remainingInStage + (empiricalRem * 0.4);
+            }
+
+            calculatedRemainingSec = (empiricalRem * 0.7) + (itemBasedRem * 0.3);
+        } else {
+            const baselineTotal = computeBaselineTotalSeconds();
+            calculatedRemainingSec = Math.max(4, baselineTotal * ((100 - percent) / 100));
+        }
+
+        if (etaSmoothedSeconds === null) {
+            etaSmoothedSeconds = calculatedRemainingSec;
+        } else {
+            etaSmoothedSeconds = (etaSmoothedSeconds * 0.65) + (calculatedRemainingSec * 0.35);
+        }
+
+        lastEtaSampleTs = Date.now();
+        renderEtaDisplay(etaSmoothedSeconds);
+    }
+
+    function tickEtaTimer() {
+        if (!isRunning || etaSmoothedSeconds === null) return;
+        
+        if (etaSmoothedSeconds > 1) {
+            etaSmoothedSeconds = Math.max(1, etaSmoothedSeconds - 1);
+        }
+        renderEtaDisplay(etaSmoothedSeconds);
+    }
+
+    function renderEtaDisplay(seconds) {
+        if (!etaTimer) return;
+        if (!isRunning && seconds === 0) {
+            etaTimer.textContent = '00:00';
+            return;
+        }
+        if (seconds === null || seconds === undefined) {
+            etaTimer.textContent = 'Calculating...';
+            return;
+        }
+
+        const rounded = Math.round(seconds);
+        if (rounded <= 0) {
+            etaTimer.textContent = 'Done';
+        } else if (rounded < 5) {
+            etaTimer.textContent = '< 5s';
+        } else if (rounded < 60) {
+            etaTimer.textContent = `~${rounded}s`;
+        } else {
+            const mins = String(Math.floor(rounded / 60)).padStart(2, '0');
+            const secs = String(rounded % 60).padStart(2, '0');
+            etaTimer.textContent = `${mins}:${secs}`;
+        }
+    }
+
     function updateElapsedTimer() {
         if (!operationStartTime) return;
         const totalSeconds = Math.floor((Date.now() - operationStartTime) / 1000);
         const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
         const secs = String(totalSeconds % 60).padStart(2, '0');
         if (elapsedTimer) elapsedTimer.textContent = `${mins}:${secs}`;
+        tickEtaTimer();
     }
 
     function updateLiveStatCounts() {
@@ -705,58 +1307,106 @@
     }
 
     // ==========================================================================
-    // 6. Socket Real-Time Telemetry Handlers
+    // 6. Background Job Reconnection & State Hydration Engine
     // ==========================================================================
 
-    socket.on('clone:stage', (data) => {
-        const stageName = data.label || data.stage || 'Processing...';
-        if (stageLabel) stageLabel.textContent = stageName;
-        appendLog('stage', `Stage: ${stageName}`, 'STAGE');
-    });
+    function hydrateJobState(job) {
+        if (!job) return;
 
-    socket.on('clone:progress', (data) => {
-        const rawPercent = data.percent !== undefined ? data.percent : (data.progress !== undefined ? data.progress : 0);
-        const percent = Math.min(100, Math.max(0, Math.round(rawPercent)));
-        if (progressBar) progressBar.style.width = `${percent}%`;
-        if (progressText) progressText.textContent = `${percent}%`;
-        if (progressTrack) progressTrack.setAttribute('aria-valuenow', percent);
+        if (job.sourceId && !sourceIdInput.value) sourceIdInput.value = job.sourceId;
+        if (job.targetId && !targetIdInput.value) targetIdInput.value = job.targetId;
 
-        if (data.item && progressItemDetail) {
-            progressItemDetail.textContent = data.item;
+        // Populate logs history
+        if (Array.isArray(job.logs) && job.logs.length > 0) {
+            allLogs = [];
+            job.logs.forEach(l => {
+                const level = l.level || l.type || 'info';
+                const timeStr = l.timestamp ? formatLogTimestamp(l.timestamp) : (l.timeStr || formatCurrentTime());
+                allLogs.push({
+                    id: l.id || (Date.now() + Math.random()),
+                    level,
+                    message: l.message,
+                    detail: l.detail,
+                    timeStr
+                });
+            });
+            rebuildVisibleLogs();
+            updateLogCountBadge();
         }
 
-        if (data.current !== undefined && data.total !== undefined && progressCounts) {
-            progressCounts.textContent = `${data.current} / ${data.total}`;
+        // Populate stat counters
+        if (job.statCounters) {
+            statCounters = { ...job.statCounters };
+            updateLiveStatCounts();
         }
-    });
 
-    socket.on('clone:log', (entry) => {
-        const level = entry.level || entry.type || 'info';
-        appendLog(level, entry.message, entry.detail, entry.timestamp);
+        if (job.status === 'running') {
+            currentJobId = job.id;
+            try {
+                localStorage.setItem('discloner_active_job_id', job.id);
+            } catch (e) {}
 
-        if (level === 'warning') {
-            statCounters.warnings++;
+            operationStartTime = job.startedAt || Date.now();
+            setRunningState(true);
+
+            if (job.stage && stageLabel) {
+                stageLabel.textContent = job.stage.label || job.stage.stage || 'Processing in background...';
+            }
+
+            if (job.progress) {
+                const percent = Math.min(100, Math.max(0, Math.round(job.progress.progress || 0)));
+                if (progressBar) progressBar.style.width = `${percent}%`;
+                if (progressText) progressText.textContent = `${percent}%`;
+                if (progressTrack) progressTrack.setAttribute('aria-valuenow', percent);
+                if (progressItemDetail && job.progress.item) progressItemDetail.textContent = job.progress.item;
+                if (progressCounts && job.progress.current !== undefined && job.progress.total !== undefined) {
+                    progressCounts.textContent = `${job.progress.current} / ${job.progress.total}`;
+                }
+                updateEtaProgress(percent, job.progress.current, job.progress.total, job.stage ? (job.stage.label || job.stage.stage) : '');
+            } else {
+                resetEtaCalculation();
+            }
+
+            showToast('Reconnected to active background migration job.', 'info');
+
+        } else if (job.status === 'completed') {
+            const lastCompletedId = localStorage.getItem('discloner_last_completed_job');
+            if (lastCompletedId !== job.id && currentJobId === job.id) {
+                showCompletedModal(job.stats || {}, job.startedAt);
+                try {
+                    localStorage.setItem('discloner_last_completed_job', job.id);
+                    localStorage.removeItem('discloner_active_job_id');
+                } catch (e) {}
+            }
+            setRunningState(false);
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressText) progressText.textContent = '100%';
+            if (stageLabel) stageLabel.textContent = 'Completed';
+            if (etaTimer) etaTimer.textContent = '00:00';
+
+        } else if (job.status === 'failed') {
+            setRunningState(false);
+            if (stageLabel) stageLabel.textContent = 'Error Encountered';
+            try {
+                localStorage.removeItem('discloner_active_job_id');
+            } catch (e) {}
         }
-        if (entry.message && level === 'success') {
-            const lower = entry.message.toLowerCase();
-            if (lower.includes('role')) statCounters.roles++;
-            if (lower.includes('channel') || lower.includes('category')) statCounters.channels++;
-            if (lower.includes('message')) statCounters.messages++;
+    }
+
+    function formatLogTimestamp(ts) {
+        try {
+            const d = new Date(ts);
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            const s = String(d.getSeconds()).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        } catch (e) {
+            return formatCurrentTime();
         }
-        updateLiveStatCounts();
-    });
+    }
 
-    socket.on('clone:completed', (payload) => {
-        setRunningState(false);
-        if (progressBar) progressBar.style.width = '100%';
-        if (progressText) progressText.textContent = '100%';
-        if (stageLabel) stageLabel.textContent = 'Completed';
-
-        appendLog('success', 'Server migration completed successfully!', 'COMPLETED');
-        showToast('Server migration finished successfully!', 'success');
-
-        const stats = payload.stats || payload || {};
-        const durationSec = Math.round((stats.durationMs || (Date.now() - operationStartTime)) / 1000);
+    function showCompletedModal(stats, startedAt) {
+        const durationSec = Math.round((stats.durationMs || (startedAt ? Date.now() - startedAt : 0)) / 1000);
         if (statDuration) statDuration.textContent = `${durationSec}s`;
         if (statRoles) statRoles.textContent = stats.rolesCreated ?? stats.roles?.created ?? statCounters.roles;
         if (statCategories) statCategories.textContent = stats.categoriesCreated ?? stats.categories?.created ?? '-';
@@ -789,22 +1439,146 @@
         if (statWarnings) statWarnings.textContent = stats.warningsCount ?? statCounters.warnings;
 
         openModal(summaryModal);
+    }
+
+    // Socket Connection & Background Sync
+    socket.on('connect', () => {
+        if (currentJobId) {
+            socket.emit('job:subscribe', { jobId: currentJobId });
+        } else {
+            socket.emit('job:query_active');
+        }
+    });
+
+    socket.on('system:ready', () => {
+        if (currentJobId) {
+            socket.emit('job:subscribe', { jobId: currentJobId });
+        } else {
+            socket.emit('job:query_active');
+        }
+    });
+
+    socket.on('job:state', (job) => {
+        hydrateJobState(job);
+    });
+
+    socket.on('clone:started', (payload) => {
+        if (payload.jobId) {
+            currentJobId = payload.jobId;
+            try {
+                localStorage.setItem('discloner_active_job_id', payload.jobId);
+            } catch (e) {}
+        }
+        operationStartTime = payload.startedAt || Date.now();
+        setRunningState(true);
+        resetEtaCalculation();
+    });
+
+    socket.on('clone:stage', (data) => {
+        const stageName = data.label || data.stage || 'Processing...';
+        if (stageLabel) stageLabel.textContent = stageName;
+        appendLog('stage', `Stage: ${stageName}`, 'STAGE');
+    });
+
+    socket.on('clone:progress', (data) => {
+        const rawPercent = data.percent !== undefined ? data.percent : (data.progress !== undefined ? data.progress : 0);
+        const percent = Math.min(100, Math.max(0, Math.round(rawPercent)));
+        if (progressBar) progressBar.style.width = `${percent}%`;
+        if (progressText) progressText.textContent = `${percent}%`;
+        if (progressTrack) progressTrack.setAttribute('aria-valuenow', percent);
+
+        if (data.item && progressItemDetail) {
+            progressItemDetail.textContent = data.item;
+        }
+
+        if (data.current !== undefined && data.total !== undefined && progressCounts) {
+            progressCounts.textContent = `${data.current} / ${data.total}`;
+        }
+
+        updateEtaProgress(percent, data.current, data.total, stageLabel ? stageLabel.textContent : '');
+    });
+
+    socket.on('clone:log', (entry) => {
+        const level = entry.level || entry.type || 'info';
+        appendLog(level, entry.message, entry.detail, entry.timestamp);
+
+        if (level === 'warning') {
+            statCounters.warnings++;
+        }
+        if (entry.message && level === 'success') {
+            const lower = entry.message.toLowerCase();
+            if (lower.includes('role')) statCounters.roles++;
+            if (lower.includes('channel') || lower.includes('category')) statCounters.channels++;
+            if (lower.includes('message')) statCounters.messages++;
+        }
+        updateLiveStatCounts();
+    });
+
+    socket.on('clone:completed', (payload) => {
+        const durationMs = Date.now() - (operationStartTime || Date.now());
+        saveHistoricalSpeed(durationMs, statCounters.channels + statCounters.roles);
+
+        setRunningState(false);
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressText) progressText.textContent = '100%';
+        if (stageLabel) stageLabel.textContent = 'Completed';
+        if (etaTimer) etaTimer.textContent = '00:00';
+
+        appendLog('success', 'Server migration completed successfully!', 'COMPLETED');
+        showToast('Server migration finished successfully!', 'success');
+
+        const stats = payload.stats || payload || {};
+        showCompletedModal(stats, operationStartTime);
+
+        try {
+            if (payload.jobId) {
+                localStorage.setItem('discloner_last_completed_job', payload.jobId);
+            }
+            localStorage.removeItem('discloner_active_job_id');
+            currentJobId = null;
+        } catch (e) {}
     });
 
     socket.on('clone:error', (data) => {
         setRunningState(false);
         if (stageLabel) stageLabel.textContent = 'Error Encountered';
+        if (etaTimer) etaTimer.textContent = '-';
         const errMessage = data.message || data.error || 'An unexpected failure occurred during cloning.';
         appendLog('error', errMessage, 'ERROR');
         showToast(errMessage, 'error');
+        try {
+            localStorage.removeItem('discloner_active_job_id');
+            currentJobId = null;
+        } catch (e) {}
     });
 
     socket.on('clone:cancelled', () => {
         setRunningState(false);
         if (stageLabel) stageLabel.textContent = 'Cancelled';
+        if (etaTimer) etaTimer.textContent = '-';
         appendLog('warning', 'Operation cancelled by user.', 'CANCELLED');
         showToast('Operation cancelled.', 'warning');
+        try {
+            localStorage.removeItem('discloner_active_job_id');
+            currentJobId = null;
+        } catch (e) {}
     });
+
+    // Check active job via REST on page load
+    async function checkActiveJobOnBoot() {
+        try {
+            const res = await fetch('/api/jobs/active');
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.job) {
+                    hydrateJobState(data.job);
+                }
+            }
+        } catch (err) {
+            // Offline / initial connection
+        }
+    }
+    checkActiveJobOnBoot();
 
     if (closeSummaryBtn) {
         closeSummaryBtn.addEventListener('click', () => closeModal(summaryModal));

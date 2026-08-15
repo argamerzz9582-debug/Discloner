@@ -1179,6 +1179,113 @@ a {
     flex-shrink: 0;
 }
 
+/* Configuration Action Toolbar */
+.config-actions-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 14px;
+    margin-top: 6px;
+    border-top: 1px solid var(--border-divider);
+}
+
+.config-btns-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.neu-btn-save-config {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-raised);
+    color: var(--accent);
+    box-shadow: var(--shadow-raised-sm);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    touch-action: manipulation;
+}
+
+.neu-btn-save-config:hover {
+    background-color: var(--accent-light);
+    box-shadow: var(--shadow-raised-hover);
+    transform: translateY(-1px);
+}
+
+.neu-btn-save-config:active {
+    box-shadow: var(--shadow-pressed);
+    transform: translateY(1px);
+}
+
+.neu-btn-save-config .save-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.neu-btn-save-config.saved-state {
+    color: var(--success);
+    background-color: var(--success-bg);
+}
+
+.neu-btn-reset-config {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-raised);
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-raised-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    touch-action: manipulation;
+}
+
+.neu-btn-reset-config:hover {
+    color: var(--text-primary);
+    box-shadow: var(--shadow-raised-hover);
+    transform: translateY(-1px);
+}
+
+.neu-btn-reset-config:active {
+    box-shadow: var(--shadow-pressed);
+    transform: translateY(1px);
+}
+
+.neu-btn-reset-config .reset-icon {
+    width: 13px;
+    height: 13px;
+}
+
+.config-status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--success);
+    background-color: var(--success-bg);
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    animation: fadeIn 0.25s ease;
+}
+
+.config-status-tag .saved-icon {
+    width: 12px;
+    height: 12px;
+}
+
 /* 13. Action Primary & Danger Buttons */
 .cta-actions-group {
     display: flex;
@@ -1368,6 +1475,51 @@ a {
     0% { transform: scale(0.95); opacity: 0.7; }
     50% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 10px var(--accent); }
     100% { transform: scale(0.95); opacity: 0.7; }
+}
+
+.active-timers-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.eta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    background-color: var(--accent-light);
+    color: var(--accent);
+    box-shadow: var(--shadow-raised-sm);
+    transition: all var(--transition-fast);
+}
+
+.eta-icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    animation: spinSlow 8s linear infinite;
+}
+
+@keyframes spinSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.eta-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    opacity: 0.85;
+}
+
+.eta-value {
+    font-size: 11.5px;
+    font-weight: 700;
 }
 
 .elapsed-badge {
@@ -1720,14 +1872,16 @@ a {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(17, 19, 24, 0.45);
+    background-color: rgba(17, 19, 24, 0.55);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     animation: modalBackdropFade 0.2s ease;
 }
 
@@ -1739,14 +1893,19 @@ a {
 .neu-modal-card {
     width: 100%;
     max-width: 480px;
+    max-height: calc(100dvh - 32px);
+    max-height: calc(100vh - 32px);
     background-color: var(--surface);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-raised-hover);
     border: 1px solid var(--border-subtle);
-    padding: 24px;
+    padding: 22px 24px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 12px;
+    overflow: hidden;
+    position: relative;
+    margin: auto;
     animation: modalScaleUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -1756,14 +1915,15 @@ a {
 }
 
 .modal-header-icon {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: var(--shadow-raised-sm);
     margin: 0 auto;
+    flex-shrink: 0;
 }
 
 .warning-icon-bg {
@@ -1780,10 +1940,11 @@ a {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .modal-title {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
     color: var(--text-primary);
 }
@@ -1822,20 +1983,37 @@ a {
 .modal-body-content {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-right: 4px;
+    margin-right: -4px;
+}
+
+.modal-body-content::-webkit-scrollbar {
+    width: 5px;
+}
+.modal-body-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.modal-body-content::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 4px;
 }
 
 .modal-desc {
-    font-size: 13px;
+    font-size: 12.5px;
     color: var(--text-secondary);
-    line-height: 1.5;
+    line-height: 1.45;
 }
 
 .confirm-route-box {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-radius: var(--radius-md);
     background-color: var(--surface-inset);
     box-shadow: var(--shadow-inset);
@@ -1845,7 +2023,7 @@ a {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 12.5px;
+    font-size: 12px;
 }
 
 .route-label {
@@ -1861,6 +2039,8 @@ a {
     text-align: center;
     color: var(--accent);
     font-weight: 700;
+    font-size: 12px;
+    line-height: 1;
 }
 
 .confirm-clean-notice {
@@ -1884,14 +2064,27 @@ a {
 
 .modal-actions-row {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: 10px;
     width: 100%;
+    flex-shrink: 0;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
+    background-color: var(--surface);
+    z-index: 5;
 }
 
 .modal-actions-row .neu-btn-primary, .modal-actions-row .neu-btn-secondary {
     width: auto;
     flex: 1;
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
 }
 
 /* Stats Summary Grid in Success Modal */
@@ -2146,8 +2339,50 @@ a {
         width: 100%;
     }
 
+    .neu-modal-card {
+        padding: 16px;
+        max-height: calc(100dvh - 24px);
+        max-height: calc(100vh - 24px);
+        gap: 10px;
+    }
+
+    .modal-header-icon {
+        width: 38px;
+        height: 38px;
+        margin-bottom: 2px;
+    }
+
+    .modal-header-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .modal-title {
+        font-size: 15px;
+        text-align: center;
+    }
+
+    .modal-desc {
+        font-size: 12px;
+        text-align: center;
+    }
+
     .modal-actions-row {
-        flex-direction: column;
+        flex-direction: row;
+        gap: 8px;
+        padding-top: 10px;
+    }
+
+    .modal-actions-row .neu-btn-primary {
+        flex: 1.3;
+        min-height: 44px;
+        font-size: 13px;
+    }
+
+    .modal-actions-row .neu-btn-secondary {
+        flex: 0.9;
+        min-height: 44px;
+        font-size: 13px;
     }
 
     .stats-summary-grid {
@@ -2156,6 +2391,10 @@ a {
 }
 
 @media (max-width: 480px) {
+    .modal-backdrop {
+        padding: 8px;
+    }
+
     .header-inner {
         padding: 8px 12px;
     }
@@ -2180,8 +2419,60 @@ a {
     }
 
     .neu-modal-card {
-        padding: 18px;
-        max-height: 90vh;
+        padding: 14px 12px 12px 12px;
+        max-height: calc(100dvh - 16px);
+        max-height: calc(100vh - 16px);
+        gap: 8px;
+        border-radius: var(--radius-md);
+    }
+
+    .confirm-route-box {
+        padding: 8px 10px;
+        gap: 4px;
+    }
+
+    .route-item {
+        font-size: 11.5px;
+    }
+
+    .preflight-box {
+        margin-top: 6px;
+        padding: 10px;
+        gap: 6px;
+    }
+
+    .preflight-checks-list {
+        max-height: 100px;
+        gap: 4px;
+    }
+
+    .preflight-check-item {
+        font-size: 11.5px;
+        gap: 6px;
+    }
+
+    .cleanup-alert-box {
+        padding: 8px 10px;
+        font-size: 11px;
+    }
+
+    .modal-actions-row {
+        gap: 8px;
+        padding-top: 8px;
+    }
+
+    .modal-actions-row .neu-btn-primary {
+        flex: 1.3;
+        min-height: 42px;
+        font-size: 12.5px;
+        padding: 8px 10px;
+    }
+
+    .modal-actions-row .neu-btn-secondary {
+        flex: 0.8;
+        min-height: 42px;
+        font-size: 12px;
+        padding: 8px 8px;
     }
 
     .telemetry-stats-grid {
@@ -2311,7 +2602,318 @@ a {
     color: var(--danger);
 }
 
-/* 19. Reduced Motion Support */
+/* 19. Guided Onboarding Tour & Spotlight */
+.tour-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    pointer-events: auto;
+    transition: opacity 0.3s ease;
+}
+
+.tour-overlay.hidden {
+    display: none;
+    opacity: 0;
+}
+
+.tour-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 14, 22, 0.7);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    transition: all 0.3s ease;
+}
+
+[data-theme="light"] .tour-backdrop {
+    background: rgba(20, 28, 45, 0.48);
+}
+
+.tour-spotlight-frame {
+    position: absolute;
+    border-radius: var(--radius-md);
+    box-shadow: 0 0 0 9999px rgba(10, 14, 22, 0.7), 0 0 24px var(--accent-glow);
+    border: 2.5px solid var(--accent);
+    pointer-events: none;
+    transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 10000;
+}
+
+[data-theme="light"] .tour-spotlight-frame {
+    box-shadow: 0 0 0 9999px rgba(20, 28, 45, 0.48), 0 0 20px rgba(49, 85, 217, 0.45);
+}
+
+.tour-card {
+    position: absolute;
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    background-color: var(--surface-raised);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-raised-hover), 0 16px 36px rgba(0, 0, 0, 0.32);
+    border: 1px solid var(--border-subtle);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    z-index: 10001;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+    animation: tourCardPop 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    touch-action: pan-y;
+}
+
+.tour-mobile-handle {
+    display: none;
+    width: 38px;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background-color: var(--text-disabled);
+    margin: -4px auto 6px auto;
+    opacity: 0.7;
+}
+
+@keyframes tourCardPop {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.tour-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.tour-badge-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tour-step-counter {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.tour-close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--surface-inset);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    touch-action: manipulation;
+}
+
+.tour-close-btn:hover {
+    color: var(--text-primary);
+    background-color: var(--surface-hover);
+    transform: scale(1.05);
+}
+
+.tour-close-btn:active {
+    transform: scale(0.95);
+}
+
+.tour-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tour-step-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.tour-step-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.tour-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-divider);
+}
+
+.tour-progress-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tour-step-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--text-disabled);
+    transition: all var(--transition-fast);
+}
+
+.tour-step-dot.active {
+    width: 18px;
+    border-radius: var(--radius-full);
+    background-color: var(--accent);
+}
+
+.tour-step-dot.completed {
+    background-color: var(--success);
+}
+
+.tour-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tour-btn-skip {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+    touch-action: manipulation;
+}
+
+.tour-btn-skip:hover {
+    color: var(--text-primary);
+}
+
+.tour-btn-back {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-inset);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    touch-action: manipulation;
+}
+
+.tour-btn-back:hover {
+    color: var(--text-primary);
+    background-color: var(--surface-hover);
+}
+
+.tour-btn-back:active {
+    transform: scale(0.97);
+}
+
+.tour-btn-next {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary-text);
+    background-color: var(--primary);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-raised-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    touch-action: manipulation;
+}
+
+.tour-btn-next:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.tour-btn-next:active {
+    transform: translateY(1px);
+}
+
+.tour-arrow-icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* Highlighted target pulsing ring */
+.tour-target-highlight {
+    position: relative;
+    z-index: 10002 !important;
+}
+
+/* Mobile-Optimistic Tour Styles (Phones & Small Tablets) */
+@media (max-width: 768px) {
+    .tour-mobile-handle {
+        display: block;
+    }
+
+    .tour-card {
+        position: fixed !important;
+        bottom: max(12px, env(safe-area-inset-bottom, 12px)) !important;
+        left: 12px !important;
+        right: 12px !important;
+        top: auto !important;
+        width: auto !important;
+        max-width: calc(100vw - 24px) !important;
+        padding: 16px 18px max(16px, env(safe-area-inset-bottom, 16px)) 18px;
+        border-radius: 18px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+        transform: translateY(0) !important;
+        animation: tourMobileSlideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes tourMobileSlideUp {
+        from { opacity: 0; transform: translateY(20px) !important; }
+        to { opacity: 1; transform: translateY(0) !important; }
+    }
+
+    .tour-step-title {
+        font-size: 14.5px;
+    }
+
+    .tour-step-desc {
+        font-size: 12.5px;
+        line-height: 1.45;
+    }
+
+    .tour-actions {
+        gap: 8px;
+    }
+
+    .tour-btn-next,
+    .tour-btn-back,
+    .tour-btn-skip {
+        min-height: 44px;
+        min-width: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tour-close-btn {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
+    }
+}
+
+/* 20. Reduced Motion Support */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;
