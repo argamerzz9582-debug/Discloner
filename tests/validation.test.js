@@ -32,9 +32,16 @@ test('normalizeCloneOptions sets sane defaults and clamps limits', () => {
     assert.equal(opts.cloneRoles, true);
     assert.equal(opts.cloneChannels, true);
     assert.equal(opts.clonePermissions, true);
+    assert.equal(opts.cloneProfile, true);
+    assert.equal(opts.cloneMessages, false); // Default OFF
+    assert.equal(opts.cloneAttachments, false); // Default OFF when messages OFF
+    assert.equal(opts.cleanTarget, false); // Default OFF
     assert.equal(opts.msgLimit, 15);
     assert.equal(opts.msgDelay, 1000);
-    assert.equal(opts.cleanTarget, true);
+
+    const withMessages = normalizeCloneOptions({ cloneMessages: true, cloneAttachments: true });
+    assert.equal(withMessages.cloneMessages, true);
+    assert.equal(withMessages.cloneAttachments, true);
 
     const clampedOpts = normalizeCloneOptions({ msgLimit: 999, msgDelay: 50 });
     assert.equal(clampedOpts.msgLimit, 100);

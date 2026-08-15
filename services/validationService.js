@@ -36,14 +36,17 @@ export function normalizeCloneOptions(options = {}) {
     const rawDelay = parseInt(options.msgDelay, 10);
     const msgDelay = isNaN(rawDelay) ? 1000 : Math.max(200, Math.min(5000, rawDelay));
 
+    const cloneMessages = Boolean(options.cloneMessages);
+    const cloneAttachments = cloneMessages ? Boolean(options.cloneAttachments) : false;
+
     return {
         cloneRoles: options.cloneRoles !== false,
         cloneChannels: options.cloneChannels !== false,
         clonePermissions: options.clonePermissions !== false,
-        cloneMessages: Boolean(options.cloneMessages),
-        cloneAttachments: options.cloneAttachments !== false,
+        cloneMessages,
+        cloneAttachments,
         cloneProfile: options.cloneProfile !== false,
-        cleanTarget: options.cleanTarget !== false,
+        cleanTarget: Boolean(options.cleanTarget),
         msgLimit,
         msgDelay
     };
