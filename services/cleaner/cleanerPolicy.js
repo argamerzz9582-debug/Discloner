@@ -12,63 +12,117 @@ export class CleanerPolicy {
 
     /**
      * Determines whether a role is protected from deletion.
+     * Evaluates @everyone, managed bots/integrations/booster roles,
+     * hierarchy relative to client role, and client permissions.
+     * 
      * @param {Object} role - Discord Role object
-     * @param {Object} context - { clientUserId, clientHighestRolePosition }
-     * @returns {{ protected: boolean, reason?: string }}
+     * @param {Object} context - { isOwner, clientHighestRolePosition, manifestRoleIds }
+     * @returns {{ protected: boolean, reason?: string, managed: boolean, deletable: boolean }}
      */
     isRoleProtected(role, context = {}) {
         if (!role) {
-            return { protected: true, reason: 'Invalid role object' };
+            return {
+                protected: true,
+                reason: 'Invalid or missing role object',
+                managed: false,
+                deletable: false
+            };
         }
 
-        // @everyone cannot and must not be deleted
-        if (role.name === '@everyone' || role.id === role.guild?.id) {
-            return { protected: true, reason: 'System role (@everyone) cannot be deleted' };
+        const isManaged = Boolean(
+            role.managed ||
+            role.tags?.botId ||
+            role.tags?.integrationId ||
+            role.tags?.premiumSubscriberRole
+        );
+
+        // 1. @everyone cannot and must not be deleted
+        if (role.name === '@everyone' || role.id === role.guild?.id || role.position === 0) {
+            return {
+                protected: true,
+                reason: 'System role (@everyone) cannot be deleted',
+                managed: isManaged,
+                deletable: false
+            };
         }
 
-        // Managed roles (bots, integrations, nitro booster) cannot be deleted manually
-        if (role.managed) {
-            return { protected: true, reason: 'Managed integration role' };
+        // 2. Managed roles (bots, integrations, nitro booster) cannot be deleted manually
+        if (isManaged) {
+            return {
+                protected: true,
+                reason: 'Managed system/integration/bot role',
+                managed: true,
+                deletable: false
+            };
         }
 
-        // Discord client cannot delete roles higher or equal to its highest role unless server owner
+        // 3. Discord client cannot delete roles higher than or equal to its highest role unless server owner
         if (context.clientHighestRolePosition !== undefined && role.position >= context.clientHighestRolePosition) {
             if (!context.isOwner) {
-                return { protected: true, reason: 'Role position is higher than or equal to client role hierarchy' };
+                return {
+                    protected: true,
+                    reason: 'Role position is higher than or equal to client role hierarchy',
+                    managed: false,
+                    deletable: false
+                };
             }
         }
 
-        if (role.editable === false) {
-            return { protected: true, reason: 'Role is marked non-editable by client' };
+        // 4. Explicit Discord flags
+        if (role.editable === false || role.deletable === false) {
+            return {
+                protected: true,
+                reason: 'Role is marked non-deletable by Discord client permissions',
+                managed: false,
+                deletable: false
+            };
         }
 
-        return { protected: false };
+        // 5. MANAGED cleanup mode constraint
+        if (this.mode === CLEANUP_MODES.MANAGED) {
+            const isTracked = context.manifestRoleIds?.has?.(role.id);
+            if (!isTracked) {
+                return {
+                    protected: true,
+                    reason: 'Unmanaged role (MANAGED mode)',
+                    managed: false,
+                    deletable: false
+                };
+            }
+        }
+
+        return {
+            protected: false,
+            managed: false,
+            deletable: true
+        };
     }
 
     /**
      * Determines whether a channel is protected from deletion.
      * @param {Object} channel - Discord Channel object
-     * @param {Object} context - { systemChannelId, rulesChannelId, publicUpdatesChannelId }
-     * @returns {{ protected: boolean, reason?: string }}
+     * @param {Object} context - { systemChannelId, rulesChannelId, publicUpdatesChannelId, manifestChannelIds }
+     * @returns {{ protected: boolean, reason?: string, deletable: boolean }}
      */
     isChannelProtected(channel, context = {}) {
         if (!channel) {
-            return { protected: true, reason: 'Invalid channel object' };
+            return { protected: true, reason: 'Invalid channel object', deletable: false };
         }
 
         // Check if channel is deletable by the client
         if (channel.deletable === false) {
-            return { protected: true, reason: 'Channel is marked non-deletable by client permissions' };
+            return { protected: true, reason: 'Channel is marked non-deletable by client permissions', deletable: false };
         }
 
         // If in MANAGED mode, only delete if managed by previous migration manifest
         if (this.mode === CLEANUP_MODES.MANAGED) {
-            const isManaged = context.manifestChannelIds?.has(channel.id);
+            const isManaged = context.manifestChannelIds?.has?.(channel.id);
             if (!isManaged) {
-                return { protected: true, reason: 'Unmanaged resource (MANAGED mode)' };
+                return { protected: true, reason: 'Unmanaged resource (MANAGED mode)', deletable: false };
             }
         }
 
-        return { protected: false };
+        return { protected: false, deletable: true };
     }
 }
+

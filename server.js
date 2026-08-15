@@ -6,7 +6,8 @@ import { fileURLToPath } from 'url';
 import { validateClonePayload } from './services/validationService.js';
 import { jobManager } from './services/jobManager.js';
 import { runPreflightCheck } from './services/preflightService.js';
-import { createLogEntry, sanitizeText } from './utils/logger.js';
+import { sanitizeText } from './utils/logger.js';
+import { globalRateLimiter } from './services/reliability/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -34,6 +35,8 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'online',
         uptime: process.uptime(),
+        activeJobs: jobManager.getActiveJobCount(),
+        telemetry: globalRateLimiter.getStats(),
         timestamp: new Date().toISOString()
     });
 });
@@ -57,21 +60,29 @@ app.get('/api/jobs/:jobId', (req, res) => {
 app.post('/api/jobs/start', (req, res) => {
     const validation = validateClonePayload(req.body);
     if (!validation.valid) {
-        return res.status(400).json({ success: false, error: validation.error });
+        return res.status(400).json({ success: false, error: validation.error, code: validation.code });
     }
 
-    const job = jobManager.startJob({
-        userToken: validation.userToken,
-        sourceId: validation.sourceId,
-        targetId: validation.targetId,
-        options: validation.options
-    });
+    try {
+        const job = jobManager.startJob({
+            userToken: validation.userToken,
+            sourceId: validation.sourceId,
+            targetId: validation.targetId,
+            options: validation.options
+        });
 
-    res.json({
-        success: true,
-        jobId: job.id,
-        job: jobManager.getJobSnapshot(job.id)
-    });
+        res.json({
+            success: true,
+            jobId: job.id,
+            job: jobManager.getJobSnapshot(job.id)
+        });
+    } catch (err) {
+        res.status(err.code === 'JOB_QUEUE_FULL' || err.code === 'JOB_ALREADY_RUNNING' ? 429 : 500).json({
+            success: false,
+            error: err.message,
+            code: err.code || 'JOB_START_ERROR'
+        });
+    }
 });
 
 // Cancel Job via REST
@@ -86,7 +97,7 @@ io.on('connection', (socket) => {
     // Client connects
     socket.emit('system:ready', {
         serverTime: new Date().toISOString(),
-        version: '2.0.0'
+        version: '2.1.0'
     });
 
     // Subscribe to a specific background job
@@ -146,13 +157,13 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Start Clone Sequence handler (supports both new 'clone:start' and legacy 'start_clone')
+    // Start Clone Sequence handler
     const handleStartClone = (data) => {
-        // Validate payload
         const validation = validateClonePayload(data);
         if (!validation.valid) {
             socket.emit('clone:error', {
-                message: validation.error
+                message: validation.error,
+                code: validation.code
             });
             socket.emit('log', `[ERROR] ${validation.error}`);
             return;
@@ -160,23 +171,31 @@ io.on('connection', (socket) => {
 
         const { userToken, sourceId, targetId, options } = validation;
 
-        // Start background detached job
-        const job = jobManager.startJob({
-            userToken,
-            sourceId,
-            targetId,
-            options
-        });
+        try {
+            const job = jobManager.startJob({
+                userToken,
+                sourceId,
+                targetId,
+                options,
+                socketId: socket.id
+            });
 
-        currentSubscribedJobId = job.id;
-        socket.join(`job:${job.id}`);
+            currentSubscribedJobId = job.id;
+            socket.join(`job:${job.id}`);
 
-        socket.emit('clone:started', {
-            jobId: job.id,
-            sourceId,
-            targetId,
-            startedAt: job.startedAt
-        });
+            socket.emit('clone:started', {
+                jobId: job.id,
+                sourceId,
+                targetId,
+                startedAt: job.startedAt
+            });
+        } catch (err) {
+            socket.emit('clone:error', {
+                message: err.message,
+                code: err.code || 'JOB_START_ERROR'
+            });
+            socket.emit('log', `[ERROR] ${err.message}`);
+        }
     };
 
     socket.on('clone:start', handleStartClone);
@@ -190,7 +209,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Safe disconnect: Do NOT cancel the background task!
+    // Safe disconnect: Do NOT cancel background tasks!
     socket.on('disconnect', () => {
         if (currentSubscribedJobId) {
             socket.leave(`job:${currentSubscribedJobId}`);
@@ -198,8 +217,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Discord Server Cloner running on http://0.0.0.0:${PORT}`);
 });
-

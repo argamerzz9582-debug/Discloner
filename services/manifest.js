@@ -1,6 +1,7 @@
 /**
- * Migration Manifest & Ownership Tracking
- * Maintains in-memory session tracking of created resources for verification and managed lifecycle
+ * Migration Manifest & Reliability Telemetry Tracking
+ * Maintains in-memory session tracking of created resources, verification state,
+ * retry metrics, rate-limit statistics, and failure isolation.
  */
 
 export class MigrationManifest {
@@ -28,11 +29,43 @@ export class MigrationManifest {
         this.categories = { planned: 0, created: 0, skipped: 0, failed: 0, items: [] };
         this.channels = { planned: 0, created: 0, skipped: 0, failed: 0, items: [] };
         this.permissions = { planned: 0, applied: 0, skipped: 0, failed: 0 };
-        this.messages = { planned: 0, copied: 0, skipped: 0, failed: 0 };
+        this.messages = { planned: 0, copied: 0, skipped: 0, failed: 0, retried: 0, items: [] };
         this.attachments = { planned: 0, copied: 0, skipped: 0, failed: 0 };
+
+        // Reliability Telemetry
+        this.telemetry = {
+            retryCount: 0,
+            rateLimitCount: 0,
+            totalRetryDelayMs: 0,
+            networkErrorCount: 0,
+            timeoutCount: 0,
+            permissionErrorCount: 0,
+            fatalErrorCount: 0,
+            operationsDelayed: 0,
+            operationsFailedAfterRetry: 0
+        };
 
         this.warnings = [];
         this.errors = [];
+    }
+
+    recordRetry(waitMs = 0) {
+        this.telemetry.retryCount++;
+        this.telemetry.totalRetryDelayMs += Math.max(0, waitMs);
+    }
+
+    recordRateLimit(waitMs = 0) {
+        this.telemetry.rateLimitCount++;
+        this.telemetry.totalRetryDelayMs += Math.max(0, waitMs);
+    }
+
+    recordClassifiedError(err) {
+        if (!err) return;
+        const code = err.code || err.name;
+        if (code === 'NETWORK_ERROR') this.telemetry.networkErrorCount++;
+        else if (code === 'TIMEOUT') this.telemetry.timeoutCount++;
+        else if (code === 'PERMISSION_DENIED' || code === 'ACCESS_DENIED') this.telemetry.permissionErrorCount++;
+        else if (code === 'AUTHENTICATION_ERROR') this.telemetry.fatalErrorCount++;
     }
 
     recordRole(sourceRole, targetRole, status = 'created', error = null) {
@@ -49,7 +82,7 @@ export class MigrationManifest {
             sourceName: sourceRole.name,
             targetId: targetRole?.id || null,
             status,
-            error: error ? error.message : null
+            error: error ? (error.message || String(error)) : null
         });
     }
 
@@ -67,7 +100,7 @@ export class MigrationManifest {
             sourceName: sourceCat.name,
             targetId: targetCat?.id || null,
             status,
-            error: error ? error.message : null
+            error: error ? (error.message || String(error)) : null
         });
     }
 
@@ -86,7 +119,7 @@ export class MigrationManifest {
             type: sourceCh.type,
             targetId: targetCh?.id || null,
             status,
-            error: error ? error.message : null
+            error: error ? (error.message || String(error)) : null
         });
     }
 
@@ -117,7 +150,8 @@ export class MigrationManifest {
             messagesCopied: this.messages.copied,
             attachmentsCopied: this.attachments.copied,
             warningsCount: this.warnings.length,
-            errorsCount: this.errors.length
+            errorsCount: this.errors.length,
+            telemetry: { ...this.telemetry }
         };
     }
 
@@ -142,6 +176,7 @@ export class MigrationManifest {
             permissions: this.permissions,
             messages: this.messages,
             attachments: this.attachments,
+            telemetry: { ...this.telemetry },
             warningsCount: this.warnings.length,
             errorsCount: this.errors.length
         };

@@ -1,6 +1,7 @@
 /**
  * DISCLONER - Enterprise Server Clone & Migration Engine
- * User-token based architecture with deterministic stages, manifest tracking, and verification
+ * User-token based architecture with centralized reliability, rate-limit backoff,
+ * bounded concurrency, idempotency safety, and comprehensive telemetry.
  */
 
 import { createLogEntry } from '../utils/logger.js';
@@ -9,8 +10,12 @@ import { createCleanupPlan, executeCleanupPlan, verifyCleanupState } from './cle
 import { MigrationManifest } from './manifest.js';
 import { verifyTargetGuildMigration } from './verifyService.js';
 import { VERIFICATION_STATUSES } from './configContract.js';
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+import {
+    executeDiscordOperation,
+    OPERATION_POLICIES,
+    cancellableSleep,
+    globalRateLimiter
+} from './reliability/index.js';
 
 /**
  * Sanitizes content to prevent unintended massive pings
@@ -35,7 +40,6 @@ export async function executeClone({
     onLog = () => {},
     isCancelled = () => false
 }) {
-    const startTime = Date.now();
     const manifest = new MigrationManifest(sourceId, targetId, options);
 
     const emitLog = (type, message, detail = null, stage = null) => {
@@ -45,12 +49,23 @@ export async function executeClone({
     };
 
     let client = null;
-    let activeWebhooks = [];
+    const activeWebhooks = [];
 
     const checkCancellation = () => {
         if (isCancelled()) {
             throw new Error('Operation was cancelled by user.');
         }
+    };
+
+    // Shared event handlers for operation executor
+    const makeRetryHandler = (stage) => ({ operation, resourceType, attempt, maxAttempts, waitMs }) => {
+        manifest.recordRetry(waitMs);
+        emitLog('warning', `Retrying ${operation} for ${resourceType || 'item'} (${attempt}/${maxAttempts}) in ${(waitMs / 1000).toFixed(1)}s...`, null, stage);
+    };
+
+    const makeRateLimitHandler = (stage) => ({ operation, resourceType, retryAfterMs }) => {
+        manifest.recordRateLimit(retryAfterMs);
+        emitLog('warning', `Rate-limit detected on ${operation}. Backing off for ${(retryAfterMs / 1000).toFixed(1)}s...`, null, stage);
     };
 
     try {
@@ -99,12 +114,22 @@ export async function executeClone({
         emitLog('info', 'Fetching roles, channels, categories, and guild configuration...', null, 'reading_source');
 
         try {
-            await Promise.allSettled([
-                sourceGuild.roles.fetch().catch(() => {}),
-                sourceGuild.channels.fetch().catch(() => {}),
-                targetGuild.roles.fetch().catch(() => {}),
-                targetGuild.channels.fetch().catch(() => {})
-            ]);
+            await executeDiscordOperation({
+                operationName: 'fetch_guild_structures',
+                resourceType: 'guild',
+                policy: OPERATION_POLICIES.READ,
+                isCancelled,
+                execute: async () => {
+                    await Promise.allSettled([
+                        sourceGuild.roles?.fetch?.().catch(() => {}),
+                        sourceGuild.channels?.fetch?.().catch(() => {}),
+                        targetGuild.roles?.fetch?.().catch(() => {}),
+                        targetGuild.channels?.fetch?.().catch(() => {})
+                    ]);
+                },
+                onRetry: makeRetryHandler('reading_source'),
+                onRateLimit: makeRateLimitHandler('reading_source')
+            });
         } catch (fetchErr) {
             emitLog('warning', 'Could not pre-fetch full guild cache, using cached structure.', fetchErr.message, 'reading_source');
         }
@@ -125,7 +150,8 @@ export async function executeClone({
                 plan: cleanupPlan,
                 onProgress: (pct, cur, tot, item) => onProgress(24 + Math.round((pct / 100) * 8), cur, tot, item),
                 onLog: emitLog,
-                isCancelled
+                isCancelled,
+                options
             });
 
             cleanupReport = verifyCleanupState(targetGuild, cleanupResult);
@@ -145,36 +171,66 @@ export async function executeClone({
             onStage('cloning_profile', 'Cloning Server Branding & Profile', 34);
             emitLog('info', 'Synchronizing server title, icon, and banner assets...', null, 'cloning_profile');
 
-            const profileTasks = [];
-
             if (targetGuild.name !== sourceGuild.name) {
-                profileTasks.push(
-                    targetGuild.setName(sourceGuild.name)
-                        .then(() => emitLog('success', `Updated server name to "${sourceGuild.name}"`, null, 'cloning_profile'))
-                        .catch(err => emitLog('warning', 'Failed to update server name', err.message, 'cloning_profile'))
-                );
+                try {
+                    await executeDiscordOperation({
+                        operationName: 'update_server_name',
+                        resourceType: 'guild',
+                        resourceId: targetGuild.id,
+                        policy: OPERATION_POLICIES.UPDATE,
+                        isCancelled,
+                        execute: async () => {
+                            await targetGuild.setName(sourceGuild.name);
+                        },
+                        onRetry: makeRetryHandler('cloning_profile'),
+                        onRateLimit: makeRateLimitHandler('cloning_profile')
+                    });
+                    emitLog('success', `Updated server name to "${sourceGuild.name}"`, null, 'cloning_profile');
+                } catch (err) {
+                    emitLog('warning', 'Failed to update server name', err.message, 'cloning_profile');
+                }
             }
 
             const iconUrl = sourceGuild.iconURL ? sourceGuild.iconURL({ dynamic: true, size: 4096 }) : null;
             if (iconUrl) {
-                profileTasks.push(
-                    targetGuild.setIcon(iconUrl)
-                        .then(() => emitLog('success', 'Synchronized server icon asset', null, 'cloning_profile'))
-                        .catch(err => emitLog('warning', 'Could not apply server icon', err.message, 'cloning_profile'))
-                );
+                try {
+                    await executeDiscordOperation({
+                        operationName: 'update_server_icon',
+                        resourceType: 'guild',
+                        resourceId: targetGuild.id,
+                        policy: OPERATION_POLICIES.UPDATE,
+                        isCancelled,
+                        execute: async () => {
+                            await targetGuild.setIcon(iconUrl);
+                        },
+                        onRetry: makeRetryHandler('cloning_profile'),
+                        onRateLimit: makeRateLimitHandler('cloning_profile')
+                    });
+                    emitLog('success', 'Synchronized server icon asset', null, 'cloning_profile');
+                } catch (err) {
+                    emitLog('warning', 'Could not apply server icon', err.message, 'cloning_profile');
+                }
             }
 
             const bannerUrl = sourceGuild.bannerURL ? sourceGuild.bannerURL({ size: 4096 }) : null;
             if (bannerUrl) {
-                profileTasks.push(
-                    targetGuild.setBanner(bannerUrl)
-                        .then(() => emitLog('success', 'Synchronized server banner asset', null, 'cloning_profile'))
-                        .catch(err => emitLog('warning', 'Could not apply server banner (tier requirement)', err.message, 'cloning_profile'))
-                );
-            }
-
-            if (profileTasks.length > 0) {
-                await Promise.allSettled(profileTasks);
+                try {
+                    await executeDiscordOperation({
+                        operationName: 'update_server_banner',
+                        resourceType: 'guild',
+                        resourceId: targetGuild.id,
+                        policy: OPERATION_POLICIES.UPDATE,
+                        isCancelled,
+                        execute: async () => {
+                            await targetGuild.setBanner(bannerUrl);
+                        },
+                        onRetry: makeRetryHandler('cloning_profile'),
+                        onRateLimit: makeRateLimitHandler('cloning_profile')
+                    });
+                    emitLog('success', 'Synchronized server banner asset', null, 'cloning_profile');
+                } catch (err) {
+                    emitLog('warning', 'Could not apply server banner (tier requirement)', err.message, 'cloning_profile');
+                }
             }
         }
 
@@ -204,7 +260,18 @@ export async function executeClone({
                     const targetEveryone = targetGuild.roles.cache.find(r => r.name === '@everyone');
                     if (targetEveryone) {
                         try {
-                            await targetEveryone.setPermissions(role.permissions);
+                            await executeDiscordOperation({
+                                operationName: 'update_everyone_permissions',
+                                resourceType: 'role',
+                                resourceId: targetEveryone.id,
+                                policy: OPERATION_POLICIES.UPDATE,
+                                isCancelled,
+                                execute: async () => {
+                                    await targetEveryone.setPermissions(role.permissions);
+                                },
+                                onRetry: makeRetryHandler('cloning_roles'),
+                                onRateLimit: makeRateLimitHandler('cloning_roles')
+                            });
                             manifest.roleMap.set(role.id, targetEveryone.id);
                         } catch (permErr) {
                             emitLog('warning', 'Could not set @everyone base permissions', permErr.message, 'cloning_roles');
@@ -214,13 +281,29 @@ export async function executeClone({
                 }
 
                 try {
-                    const newRole = await targetGuild.roles.create({
-                        name: role.name,
-                        color: role.color,
-                        hoist: role.hoist,
-                        permissions: role.permissions,
-                        mentionable: role.mentionable
+                    const newRole = await executeDiscordOperation({
+                        operationName: 'create_role',
+                        resourceType: 'role',
+                        resourceId: role.id,
+                        policy: OPERATION_POLICIES.CREATE,
+                        isCancelled,
+                        checkIdempotency: async () => {
+                            // Check if target already has this created role
+                            return targetGuild.roles.cache.find(r => r.name === role.name && !r.managed);
+                        },
+                        execute: async () => {
+                            return await targetGuild.roles.create({
+                                name: role.name,
+                                color: role.color,
+                                hoist: role.hoist,
+                                permissions: role.permissions,
+                                mentionable: role.mentionable
+                            });
+                        },
+                        onRetry: makeRetryHandler('cloning_roles'),
+                        onRateLimit: makeRateLimitHandler('cloning_roles')
                     });
+
                     if (newRole) {
                         manifest.recordRole(role, newRole, 'created');
                         emitLog('success', `Created role @${role.name}`, null, 'cloning_roles');
@@ -230,7 +313,7 @@ export async function executeClone({
                     emitLog('warning', `Failed to create role @${role.name}`, rCreateErr.message, 'cloning_roles');
                 }
 
-                await sleep(100);
+                await cancellableSleep(100, isCancelled);
             }
             emitLog('success', `Finished cloning roles (${manifest.roles.created} created, ${manifest.roles.failed} failed).`, null, 'cloning_roles');
         }
@@ -258,10 +341,25 @@ export async function executeClone({
                 onProgress(currentPct, catIdx, totalCats, `📁 ${cat.name}`);
 
                 try {
-                    const newCat = await targetGuild.channels.create(cat.name, {
-                        type: 'GUILD_CATEGORY',
-                        position: cat.position
+                    const newCat = await executeDiscordOperation({
+                        operationName: 'create_category',
+                        resourceType: 'category',
+                        resourceId: cat.id,
+                        policy: OPERATION_POLICIES.CREATE,
+                        isCancelled,
+                        checkIdempotency: async () => {
+                            return targetGuild.channels.cache.find(c => c.name === cat.name && c.type === 'GUILD_CATEGORY');
+                        },
+                        execute: async () => {
+                            return await targetGuild.channels.create(cat.name, {
+                                type: 'GUILD_CATEGORY',
+                                position: cat.position
+                            });
+                        },
+                        onRetry: makeRetryHandler('cloning_categories'),
+                        onRateLimit: makeRateLimitHandler('cloning_categories')
                     });
+
                     if (newCat) {
                         manifest.recordCategory(cat, newCat, 'created');
                         emitLog('success', `Created category [${cat.name}]`, null, 'cloning_categories');
@@ -271,7 +369,7 @@ export async function executeClone({
                     emitLog('warning', `Failed to create category [${cat.name}]`, catErr.message, 'cloning_categories');
                 }
 
-                await sleep(100);
+                await cancellableSleep(100, isCancelled);
             }
         }
 
@@ -310,7 +408,22 @@ export async function executeClone({
                 };
 
                 try {
-                    const newChannel = await targetGuild.channels.create(ch.name, channelOptions);
+                    const newChannel = await executeDiscordOperation({
+                        operationName: 'create_channel',
+                        resourceType: 'channel',
+                        resourceId: ch.id,
+                        policy: OPERATION_POLICIES.CREATE,
+                        isCancelled,
+                        checkIdempotency: async () => {
+                            return targetGuild.channels.cache.find(c => c.name === ch.name && c.type !== 'GUILD_CATEGORY' && (!parentId || c.parentId === parentId));
+                        },
+                        execute: async () => {
+                            return await targetGuild.channels.create(ch.name, channelOptions);
+                        },
+                        onRetry: makeRetryHandler('cloning_channels'),
+                        onRateLimit: makeRateLimitHandler('cloning_channels')
+                    });
+
                     if (newChannel) {
                         manifest.recordChannel(ch, newChannel, 'created');
                         targetChannelObjects.set(ch.id, newChannel);
@@ -320,10 +433,22 @@ export async function executeClone({
                     // Try graceful fallback with standard parameters
                     try {
                         const fallbackType = ch.type === 'GUILD_VOICE' ? 'GUILD_VOICE' : 'GUILD_TEXT';
-                        const fallbackChannel = await targetGuild.channels.create(ch.name, {
-                            type: fallbackType,
-                            parent: parentId || undefined
+                        const fallbackChannel = await executeDiscordOperation({
+                            operationName: 'create_channel_fallback',
+                            resourceType: 'channel',
+                            resourceId: ch.id,
+                            policy: OPERATION_POLICIES.CREATE,
+                            isCancelled,
+                            execute: async () => {
+                                return await targetGuild.channels.create(ch.name, {
+                                    type: fallbackType,
+                                    parent: parentId || undefined
+                                });
+                            },
+                            onRetry: makeRetryHandler('cloning_channels'),
+                            onRateLimit: makeRateLimitHandler('cloning_channels')
                         });
+
                         if (fallbackChannel) {
                             manifest.recordChannel(ch, fallbackChannel, 'created');
                             targetChannelObjects.set(ch.id, fallbackChannel);
@@ -335,7 +460,7 @@ export async function executeClone({
                     }
                 }
 
-                await sleep(100);
+                await cancellableSleep(100, isCancelled);
             }
             emitLog('success', `Finished building channels (${manifest.channels.created} created, ${manifest.channels.failed} failed).`, null, 'cloning_channels');
         }
@@ -360,7 +485,6 @@ export async function executeClone({
                     if (overwrite.type === 'role') {
                         targetIdResolved = manifest.roleMap.get(id);
                     } else if (overwrite.type === 'member') {
-                        // User member permission overwrites
                         if (id === client.user.id) {
                             targetIdResolved = client.user.id;
                         }
@@ -381,7 +505,18 @@ export async function executeClone({
 
                 if (newOverwrites.length > 0 && targetCh.permissionOverwrites) {
                     try {
-                        await targetCh.permissionOverwrites.set(newOverwrites);
+                        await executeDiscordOperation({
+                            operationName: 'set_permission_overwrites',
+                            resourceType: 'channel_permissions',
+                            resourceId: targetCh.id,
+                            policy: OPERATION_POLICIES.UPDATE,
+                            isCancelled,
+                            execute: async () => {
+                                await targetCh.permissionOverwrites.set(newOverwrites);
+                            },
+                            onRetry: makeRetryHandler('applying_permissions'),
+                            onRateLimit: makeRateLimitHandler('applying_permissions')
+                        });
                     } catch (permErr) {
                         manifest.permissions.failed++;
                         emitLog('warning', `Failed to apply permissions to #${targetCh.name}`, permErr.message, 'applying_permissions');
@@ -422,14 +557,46 @@ export async function executeClone({
                 );
 
                 try {
-                    const messages = await sourceChannel.messages.fetch({ limit }).catch(() => null);
+                    let messages = null;
+                    try {
+                        messages = await executeDiscordOperation({
+                            operationName: 'fetch_messages',
+                            resourceType: 'channel_messages',
+                            resourceId: srcId,
+                            policy: OPERATION_POLICIES.READ,
+                            isCancelled,
+                            execute: async () => {
+                                return await sourceChannel.messages.fetch({ limit });
+                            },
+                            onRetry: makeRetryHandler('cloning_messages'),
+                            onRateLimit: makeRateLimitHandler('cloning_messages')
+                        });
+                    } catch (fetchErr) {
+                        emitLog('warning', `Could not fetch messages from #${sourceChannel.name}`, fetchErr.message, 'cloning_messages');
+                        continue;
+                    }
+
                     if (messages && messages.size > 0) {
                         let webhook = null;
                         try {
-                            webhook = await targetChannel.createWebhook('DisclonerSync', {
-                                avatar: client.user.displayAvatarURL ? client.user.displayAvatarURL({ format: 'png' }) : undefined
+                            webhook = await executeDiscordOperation({
+                                operationName: 'create_webhook',
+                                resourceType: 'webhook',
+                                resourceId: targetChannel.id,
+                                policy: OPERATION_POLICIES.CREATE,
+                                isCancelled,
+                                execute: async () => {
+                                    return await targetChannel.createWebhook('DisclonerSync', {
+                                        avatar: client.user.displayAvatarURL ? client.user.displayAvatarURL({ format: 'png' }) : undefined
+                                    });
+                                },
+                                onRetry: makeRetryHandler('cloning_messages'),
+                                onRateLimit: makeRateLimitHandler('cloning_messages')
                             });
-                            activeWebhooks.push(webhook);
+
+                            if (webhook) {
+                                activeWebhooks.push(webhook);
+                            }
                         } catch (whErr) {
                             emitLog('warning', `Could not create webhook in #${targetChannel.name} (Missing Manage Webhooks permission)`, whErr.message, 'cloning_messages');
                             continue;
@@ -438,69 +605,83 @@ export async function executeClone({
                         const msgArray = Array.from(messages.values()).reverse();
                         manifest.messages.planned += msgArray.length;
 
-                        for (const msg of msgArray) {
-                            checkCancellation();
-                            
-                            // Prevent duplicate sending
-                            if (manifest.messageMap.has(msg.id)) {
-                                manifest.messages.skipped++;
-                                continue;
-                            }
+                        try {
+                            for (const msg of msgArray) {
+                                checkCancellation();
 
-                            const hasAttachments = options.cloneAttachments && msg.attachments && msg.attachments.size > 0;
-                            if (msg.content || hasAttachments) {
-                                const files = hasAttachments 
-                                    ? msg.attachments.map(a => a.url).filter(Boolean)
-                                    : [];
-
-                                if (options.cloneAttachments && msg.attachments) {
-                                    manifest.attachments.planned += msg.attachments.size;
+                                // Prevent duplicate sending
+                                if (manifest.messageMap.has(msg.id)) {
+                                    manifest.messages.skipped++;
+                                    continue;
                                 }
 
-                                const safeContent = sanitizeMentions(msg.content, options.mentionPolicy);
+                                const hasAttachments = options.cloneAttachments && msg.attachments && msg.attachments.size > 0;
+                                if (msg.content || hasAttachments) {
+                                    const files = hasAttachments
+                                        ? msg.attachments.map(a => a.url).filter(Boolean)
+                                        : [];
 
-                                // Retry loop for transient rate limits or webhook pacing
-                                let sent = false;
-                                let retryAttempts = 0;
-                                const maxRetries = 2;
+                                    if (options.cloneAttachments && msg.attachments) {
+                                        manifest.attachments.planned += msg.attachments.size;
+                                    }
 
-                                while (!sent && retryAttempts <= maxRetries) {
-                                    checkCancellation();
+                                    const safeContent = sanitizeMentions(msg.content, options.mentionPolicy);
+
                                     try {
-                                        await webhook.send({
-                                            content: safeContent || ' ',
-                                            username: msg.author ? msg.author.username.substring(0, 32) : 'User',
-                                            avatarURL: msg.author && msg.author.displayAvatarURL ? msg.author.displayAvatarURL({ dynamic: true }) : undefined,
-                                            files: files.slice(0, 10)
+                                        await executeDiscordOperation({
+                                            operationName: 'send_webhook_message',
+                                            resourceType: 'message',
+                                            resourceId: msg.id,
+                                            policy: OPERATION_POLICIES.MESSAGE,
+                                            isCancelled,
+                                            execute: async () => {
+                                                await webhook.send({
+                                                    content: safeContent || ' ',
+                                                    username: msg.author ? msg.author.username.substring(0, 32) : 'User',
+                                                    avatarURL: msg.author && msg.author.displayAvatarURL ? msg.author.displayAvatarURL({ dynamic: true }) : undefined,
+                                                    files: files.slice(0, 10)
+                                                });
+                                            },
+                                            onRetry: makeRetryHandler('cloning_messages'),
+                                            onRateLimit: makeRateLimitHandler('cloning_messages')
                                         });
-                                        sent = true;
+
                                         manifest.messageMap.set(msg.id, true);
                                         manifest.messages.copied++;
                                         manifest.attachments.copied += files.length;
-                                        await sleep(delay);
+                                        await cancellableSleep(delay, isCancelled);
+
                                     } catch (sendErr) {
-                                        retryAttempts++;
-                                        if (retryAttempts <= maxRetries) {
-                                            await sleep(delay * 1.5);
-                                        } else {
-                                            manifest.messages.failed++;
-                                            if (files.length > 0) manifest.attachments.failed += files.length;
-                                            emitLog('warning', `Failed to copy message from ${msg.author?.username || 'user'}`, sendErr.message, 'cloning_messages');
-                                        }
+                                        manifest.messages.failed++;
+                                        if (files.length > 0) manifest.attachments.failed += files.length;
+                                        emitLog('warning', `Failed to copy message from ${msg.author?.username || 'user'}`, sendErr.message, 'cloning_messages');
                                     }
                                 }
                             }
-                        }
-
-                        try {
-                            await webhook.delete();
-                            activeWebhooks = activeWebhooks.filter(w => w.id !== webhook.id);
-                        } catch {
-                            // ignore webhook cleanup error
+                        } finally {
+                            // Deterministic webhook cleanup
+                            if (webhook) {
+                                try {
+                                    await executeDiscordOperation({
+                                        operationName: 'delete_webhook',
+                                        resourceType: 'webhook',
+                                        resourceId: webhook.id,
+                                        policy: OPERATION_POLICIES.DELETE,
+                                        isCancelled: () => false, // Always complete cleanup
+                                        execute: async () => {
+                                            await webhook.delete();
+                                        }
+                                    });
+                                } catch {
+                                    // ignore webhook deletion error
+                                }
+                                const whIndex = activeWebhooks.indexOf(webhook);
+                                if (whIndex !== -1) activeWebhooks.splice(whIndex, 1);
+                            }
                         }
                     }
                 } catch (chMsgErr) {
-                    emitLog('warning', `Could not fetch messages from #${sourceChannel.name}`, chMsgErr.message, 'cloning_messages');
+                    emitLog('warning', `Could not sync messages in #${sourceChannel.name}`, chMsgErr.message, 'cloning_messages');
                 }
             }
             emitLog('success', `Message migration finished (${manifest.messages.copied} messages copied).`, null, 'cloning_messages');

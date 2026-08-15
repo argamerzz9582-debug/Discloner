@@ -50,13 +50,46 @@ export const ERROR_CODES = Object.freeze({
     PERMISSION_DENIED: 'PERMISSION_DENIED',
     RATE_LIMITED: 'RATE_LIMITED',
     NETWORK_ERROR: 'NETWORK_ERROR',
-    UNSUPPORTED_RESOURCE: 'UNSUPPORTED_RESOURCE',
+    TIMEOUT: 'TIMEOUT',
+    DISCORD_API_ERROR: 'DISCORD_API_ERROR',
     VALIDATION_ERROR: 'VALIDATION_ERROR',
     CONFLICT: 'CONFLICT',
+    NOT_FOUND: 'NOT_FOUND',
+    UNSUPPORTED_RESOURCE: 'UNSUPPORTED_RESOURCE',
     CLEANUP_FAILURE: 'CLEANUP_FAILURE',
+    CLEANUP_ERROR: 'CLEANUP_ERROR',
     CLONE_FAILURE: 'CLONE_FAILURE',
+    CLONE_ERROR: 'CLONE_ERROR',
     VERIFICATION_FAILURE: 'VERIFICATION_FAILURE',
-    CANCELLED: 'CANCELLED'
+    VERIFICATION_ERROR: 'VERIFICATION_ERROR',
+    CANCELLED: 'CANCELLED',
+    INTERNAL_ERROR: 'INTERNAL_ERROR'
+});
+
+export const RELIABILITY_CONFIG = Object.freeze({
+    retry: Object.freeze({
+        enabled: true,
+        maxAttempts: 3,
+        baseDelayMs: 500,
+        maxDelayMs: 10000,
+        jitter: true,
+        maxTotalRetryTimeMs: 30000
+    }),
+    rateLimit: Object.freeze({
+        respectRetryAfter: true,
+        maxWaitMs: 60000,
+        concurrencyReduction: true
+    }),
+    timeouts: Object.freeze({
+        operationTimeoutMs: 15000,
+        authTimeoutMs: 30000
+    }),
+    concurrency: Object.freeze({
+        maxJobs: 3,
+        maxOperations: 3,
+        maxMessages: 1,
+        maxCleaner: 2
+    })
 });
 
 export const VERIFICATION_STATUSES = Object.freeze({
