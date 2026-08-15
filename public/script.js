@@ -482,11 +482,51 @@
     }
 
     // ==========================================================================
-    // 4. Configuration Persistence Engine (localStorage)
+    // 4. Configuration & Token Persistence Engine (localStorage)
     // ==========================================================================
     const CONFIG_STORAGE_KEY = 'discloner_user_config';
+    const TOKEN_STORAGE_KEY = 'discloner_saved_user_token';
+
+    function saveUserToken(token) {
+        if (typeof token === 'string' && token.trim()) {
+            try {
+                localStorage.setItem(TOKEN_STORAGE_KEY, token.trim());
+            } catch (e) {}
+        }
+    }
+
+    function loadUserToken() {
+        try {
+            const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
+            if (saved && userTokenInput && !userTokenInput.value) {
+                userTokenInput.value = saved;
+                return saved;
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    if (userTokenInput) {
+        userTokenInput.addEventListener('input', () => {
+            const val = userTokenInput.value.trim();
+            if (val) {
+                saveUserToken(val);
+            }
+        });
+        userTokenInput.addEventListener('change', () => {
+            const val = userTokenInput.value.trim();
+            if (val) {
+                saveUserToken(val);
+            }
+        });
+    }
 
     function saveUserConfiguration() {
+        const token = userTokenInput ? userTokenInput.value.trim() : '';
+        if (token) {
+            saveUserToken(token);
+        }
+
         const config = {
             cleanTarget: cleanTargetCheckbox ? cleanTargetCheckbox.checked : true,
             cloneRoles: cloneRolesCheckbox ? cloneRolesCheckbox.checked : true,
@@ -508,7 +548,7 @@
             if (configSavedBadge) configSavedBadge.classList.remove('hidden');
             if (configSavedText) configSavedText.textContent = 'Saved Preferences Active';
 
-            showToast('Advanced configuration saved to browser storage!', 'success');
+            showToast('Preferences and authorization token saved!', 'success');
 
             setTimeout(() => {
                 if (saveConfigBtn) saveConfigBtn.classList.remove('saved-state');
@@ -603,8 +643,9 @@
         resetConfigBtn.addEventListener('click', resetUserConfiguration);
     }
 
-    // Load persisted settings on startup
+    // Load persisted settings and saved token on startup
     loadUserConfiguration();
+    loadUserToken();
 
     // ==========================================================================
     // 5. Guided Onboarding Tour Engine
@@ -1068,6 +1109,9 @@
 
     function startCloningProcess() {
         const payload = getPayload();
+        if (payload.userToken) {
+            saveUserToken(payload.userToken);
+        }
 
         // Reset Counters
         statCounters = { roles: 0, channels: 0, categories: 0, messages: 0, warnings: 0 };
@@ -1441,25 +1485,62 @@
         openModal(summaryModal);
     }
 
+    // ==========================================================================
+    // Page Lifecycle: Minimize Resilience & Refresh/Unload Cancellation
+    // ==========================================================================
+
+    function cancelActiveJobOnUnload() {
+        if (isRunning && currentJobId) {
+            const jobIdToCancel = currentJobId;
+            try {
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon(`/api/jobs/${encodeURIComponent(jobIdToCancel)}/cancel`, '');
+                } else {
+                    fetch(`/api/jobs/${encodeURIComponent(jobIdToCancel)}/cancel`, {
+                        method: 'POST',
+                        keepalive: true
+                    }).catch(() => {});
+                }
+            } catch (e) {}
+            try {
+                socket.emit('clone:cancel', { jobId: jobIdToCancel });
+            } catch (e) {}
+            try {
+                localStorage.removeItem('discloner_active_job_id');
+            } catch (e) {}
+        }
+    }
+
+    window.addEventListener('beforeunload', cancelActiveJobOnUnload);
+    window.addEventListener('pagehide', cancelActiveJobOnUnload);
+
+    // Tab minimize / background resilience: keep running without cancellation, sync on return
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            if (isRunning && operationStartTime) {
+                updateElapsedTimer();
+                updateLiveStatCounts();
+            }
+        }
+    });
+
     // Socket Connection & Background Sync
     socket.on('connect', () => {
         if (currentJobId) {
             socket.emit('job:subscribe', { jobId: currentJobId });
-        } else {
-            socket.emit('job:query_active');
         }
     });
 
     socket.on('system:ready', () => {
         if (currentJobId) {
             socket.emit('job:subscribe', { jobId: currentJobId });
-        } else {
-            socket.emit('job:query_active');
         }
     });
 
     socket.on('job:state', (job) => {
-        hydrateJobState(job);
+        if (currentJobId && job && job.id === currentJobId) {
+            hydrateJobState(job);
+        }
     });
 
     socket.on('clone:started', (payload) => {
@@ -1564,14 +1645,17 @@
         } catch (e) {}
     });
 
-    // Check active job via REST on page load
+    // Check active job on boot only if there is a completed snapshot to display
     async function checkActiveJobOnBoot() {
         try {
-            const res = await fetch('/api/jobs/active');
-            if (res.ok) {
-                const data = await res.json();
-                if (data && data.job) {
-                    hydrateJobState(data.job);
+            const savedJobId = localStorage.getItem('discloner_active_job_id');
+            if (savedJobId && currentJobId === savedJobId) {
+                const res = await fetch(`/api/jobs/${encodeURIComponent(savedJobId)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.job && data.job.status !== 'running') {
+                        hydrateJobState(data.job);
+                    }
                 }
             }
         } catch (err) {

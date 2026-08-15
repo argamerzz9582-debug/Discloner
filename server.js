@@ -85,8 +85,8 @@ app.post('/api/jobs/start', (req, res) => {
     }
 });
 
-// Cancel Job via REST
-app.post('/api/jobs/:jobId/cancel', (req, res) => {
+// Cancel Job via REST (supports POST, GET, Beacon keepalive)
+app.all('/api/jobs/:jobId/cancel', (req, res) => {
     const cancelled = jobManager.cancelJob(req.params.jobId);
     res.json({ success: cancelled });
 });
