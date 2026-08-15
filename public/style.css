@@ -873,15 +873,15 @@ a {
 .options-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
 }
 
 .neu-option-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 14px 18px;
+    gap: 12px;
+    padding: 10px 14px;
     border-radius: var(--radius-md);
     background-color: var(--surface-raised);
     box-shadow: var(--shadow-raised-sm);
@@ -904,7 +904,7 @@ a {
 .option-text-group {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
 }
 
 .option-title-row {
@@ -914,19 +914,19 @@ a {
 }
 
 .option-title {
-    font-size: 13.5px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-primary);
 }
 
 .option-desc {
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--text-muted);
-    line-height: 1.35;
+    line-height: 1.3;
 }
 
 .badge-opt-status {
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: 600;
     padding: 1px 6px;
     border-radius: var(--radius-full);
@@ -952,8 +952,8 @@ a {
 /* Neumorphic Toggle Switch */
 .neu-toggle {
     position: relative;
-    width: 46px;
-    height: 26px;
+    width: 44px;
+    height: 24px;
     flex-shrink: 0;
 }
 
@@ -980,8 +980,8 @@ a {
 .neu-toggle-slider::before {
     position: absolute;
     content: "";
-    height: 20px;
-    width: 20px;
+    height: 18px;
+    width: 18px;
     left: 3px;
     bottom: 3px;
     background-color: var(--surface-raised);
@@ -1015,7 +1015,7 @@ a {
     opacity: 1;
     overflow: hidden;
     transition: max-height var(--transition-smooth), opacity var(--transition-smooth), margin var(--transition-smooth);
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 .message-settings-drawer.collapsed {
@@ -1029,10 +1029,10 @@ a {
     background-color: var(--surface-inset);
     box-shadow: var(--shadow-inset);
     border-radius: var(--radius-md);
-    padding: 16px 18px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 10px;
 }
 
 .drawer-header {
@@ -1048,13 +1048,13 @@ a {
 }
 
 .drawer-icon {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
     color: var(--accent);
 }
 
 .drawer-title {
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.02em;
     color: var(--text-primary);
@@ -1063,7 +1063,7 @@ a {
 .drawer-body-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 12px;
 }
 
 /* Range Sliders */
@@ -1074,16 +1074,16 @@ a {
 }
 
 .range-label {
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
     color: var(--text-primary);
 }
 
 .range-val-badge {
     font-family: var(--font-mono);
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
-    padding: 2px 8px;
+    padding: 1px 7px;
     border-radius: var(--radius-full);
     background-color: var(--surface-raised);
     box-shadow: var(--shadow-raised-sm);
@@ -1093,14 +1093,14 @@ a {
 .neu-range-wrapper {
     display: flex;
     align-items: center;
-    height: 28px;
+    height: 24px;
 }
 
 .neu-range-slider {
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 8px;
+    height: 6px;
     border-radius: var(--radius-full);
     background-color: var(--surface-inset);
     box-shadow: var(--shadow-inset);
@@ -1110,8 +1110,8 @@ a {
 .neu-range-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background-color: var(--surface-raised);
     box-shadow: var(--shadow-raised);
@@ -1121,12 +1121,12 @@ a {
 }
 
 .neu-range-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.15);
+    transform: scale(1.12);
 }
 
 .neu-range-slider::-moz-range-thumb {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background-color: var(--surface-raised);
     box-shadow: var(--shadow-raised);
@@ -1139,20 +1139,20 @@ a {
 .advanced-accordion-section {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 4px;
+    gap: 6px;
+    margin-top: 2px;
 }
 
 .advanced-accordion-btn {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 18px;
+    padding: 10px 14px;
     border-radius: var(--radius-md);
     background-color: var(--surface-raised);
     box-shadow: var(--shadow-raised-sm);
     color: var(--text-secondary);
-    min-height: 48px;
+    min-height: 42px;
     touch-action: manipulation;
     transition: all var(--transition-fast);
 }
@@ -1170,34 +1170,29 @@ a {
 .accordion-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .gear-icon {
-    width: 17px;
-    height: 17px;
+    width: 16px;
+    height: 16px;
     color: var(--accent);
 }
 
 .accordion-title {
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
 }
 
 .accordion-right {
     display: flex;
     align-items: center;
-    gap: 8px;
-}
-
-.accordion-subtext {
-    font-size: 11px;
-    color: var(--text-muted);
+    gap: 6px;
 }
 
 .chevron-icon {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
     transition: transform var(--transition-smooth);
 }
 
@@ -1206,10 +1201,10 @@ a {
 }
 
 .advanced-panel-content {
-    max-height: 220px;
+    max-height: 1400px;
     opacity: 1;
     overflow: hidden;
-    transition: max-height var(--transition-smooth), opacity var(--transition-smooth);
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 
 .advanced-panel-content.collapsed {
@@ -1219,7 +1214,7 @@ a {
 }
 
 .advanced-panel-inner {
-    padding: 8px 0;
+    padding: 4px 0;
 }
 
 .target-behavior-block {

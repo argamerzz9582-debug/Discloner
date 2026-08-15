@@ -46,7 +46,7 @@ export function normalizeCloneOptions(options = {}) {
         cloneMessages,
         cloneAttachments,
         cloneProfile: options.cloneProfile !== false,
-        cleanTarget: Boolean(options.cleanTarget),
+        cleanTarget: options.cleanTarget !== false,
         msgLimit,
         msgDelay
     };

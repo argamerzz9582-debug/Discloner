@@ -110,28 +110,34 @@ export async function executeClone({
             emitLog('info', 'Cleaning existing channels & custom roles in target server...', null, 'cleaning_target');
 
             const targetChannels = Array.from(targetGuild.channels.cache.values());
-            for (let i = 0; i < targetChannels.length; i++) {
+            const CH_BATCH_SIZE = 3;
+            for (let i = 0; i < targetChannels.length; i += CH_BATCH_SIZE) {
                 checkCancellation();
-                const ch = targetChannels[i];
-                try {
-                    await ch.delete();
-                    onProgress(25 + Math.round((i / Math.max(1, targetChannels.length)) * 5), i + 1, targetChannels.length, `Deleted #${ch.name}`);
-                } catch (delErr) {
-                    emitLog('warning', `Skipped deleting channel #${ch.name}: ${delErr.message}`, null, 'cleaning_target');
-                }
+                const batch = targetChannels.slice(i, i + CH_BATCH_SIZE);
+                await Promise.allSettled(batch.map(async (ch, idx) => {
+                    try {
+                        await ch.delete();
+                        const currentCount = i + idx + 1;
+                        onProgress(25 + Math.round((currentCount / Math.max(1, targetChannels.length)) * 5), currentCount, targetChannels.length, `Deleted #${ch.name}`);
+                    } catch (delErr) {
+                        emitLog('warning', `Skipped deleting channel #${ch.name}: ${delErr.message}`, null, 'cleaning_target');
+                    }
+                }));
             }
 
-            const targetRoles = Array.from(targetGuild.roles.cache.values());
-            for (let i = 0; i < targetRoles.length; i++) {
+            const targetRoles = Array.from(targetGuild.roles.cache.values())
+                .filter(r => r.editable && r.name !== '@everyone' && !r.managed);
+            const ROLE_BATCH_SIZE = 3;
+            for (let i = 0; i < targetRoles.length; i += ROLE_BATCH_SIZE) {
                 checkCancellation();
-                const role = targetRoles[i];
-                if (role.editable && role.name !== '@everyone' && !role.managed) {
+                const batch = targetRoles.slice(i, i + ROLE_BATCH_SIZE);
+                await Promise.allSettled(batch.map(async (role) => {
                     try {
                         await role.delete();
                     } catch (rErr) {
                         emitLog('warning', `Skipped deleting role @${role.name}: ${rErr.message}`, null, 'cleaning_target');
                     }
-                }
+                }));
             }
             emitLog('success', 'Target server structure cleaned successfully.', null, 'cleaning_target');
         }
@@ -142,33 +148,36 @@ export async function executeClone({
             onStage('cloning_profile', 'Cloning Server Profile & Branding', 35);
             emitLog('info', 'Synchronizing server name and visual assets...', null, 'cloning_profile');
 
-            try {
-                if (targetGuild.name !== sourceGuild.name) {
-                    await targetGuild.setName(sourceGuild.name);
-                    emitLog('success', `Updated server name to "${sourceGuild.name}"`, null, 'cloning_profile');
-                }
-            } catch (nameErr) {
-                emitLog('warning', 'Failed to update server name', nameErr.message, 'cloning_profile');
+            const profileTasks = [];
+
+            if (targetGuild.name !== sourceGuild.name) {
+                profileTasks.push(
+                    targetGuild.setName(sourceGuild.name)
+                        .then(() => emitLog('success', `Updated server name to "${sourceGuild.name}"`, null, 'cloning_profile'))
+                        .catch(nameErr => emitLog('warning', 'Failed to update server name', nameErr.message, 'cloning_profile'))
+                );
             }
 
             const iconUrl = sourceGuild.iconURL({ dynamic: true, size: 4096 });
             if (iconUrl) {
-                try {
-                    await targetGuild.setIcon(iconUrl);
-                    emitLog('success', 'Synchronized server icon asset', null, 'cloning_profile');
-                } catch (iconErr) {
-                    emitLog('warning', 'Could not apply server icon', iconErr.message, 'cloning_profile');
-                }
+                profileTasks.push(
+                    targetGuild.setIcon(iconUrl)
+                        .then(() => emitLog('success', 'Synchronized server icon asset', null, 'cloning_profile'))
+                        .catch(iconErr => emitLog('warning', 'Could not apply server icon', iconErr.message, 'cloning_profile'))
+                );
             }
 
             const bannerUrl = sourceGuild.bannerURL ? sourceGuild.bannerURL({ size: 4096 }) : null;
             if (bannerUrl) {
-                try {
-                    await targetGuild.setBanner(bannerUrl);
-                    emitLog('success', 'Synchronized server banner asset', null, 'cloning_profile');
-                } catch (bannerErr) {
-                    emitLog('warning', 'Could not apply server banner (tier requirement or permission issue)', bannerErr.message, 'cloning_profile');
-                }
+                profileTasks.push(
+                    targetGuild.setBanner(bannerUrl)
+                        .then(() => emitLog('success', 'Synchronized server banner asset', null, 'cloning_profile'))
+                        .catch(bannerErr => emitLog('warning', 'Could not apply server banner (tier requirement or permission issue)', bannerErr.message, 'cloning_profile'))
+                );
+            }
+
+            if (profileTasks.length > 0) {
+                await Promise.allSettled(profileTasks);
             }
         }
 

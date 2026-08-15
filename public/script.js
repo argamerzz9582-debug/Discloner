@@ -1,5 +1,5 @@
 /**
- * DISCLONER - Neumorphic Client Controller
+ * DISCLONER - Ultra-Clean Neumorphic Client Controller
  */
 
 (function () {
@@ -31,19 +31,18 @@
     const sourceFeedback = document.getElementById('sourceFeedback');
     const targetFeedback = document.getElementById('targetFeedback');
 
-    // Options Checkboxes & Controls
+    // Options Checkboxes & Controls (Inside Advanced Panel)
+    const cleanTargetCheckbox = document.getElementById('cleanTarget');
     const cloneRolesCheckbox = document.getElementById('cloneRoles');
     const cloneChannelsCheckbox = document.getElementById('cloneChannels');
     const clonePermissionsCheckbox = document.getElementById('clonePermissions');
     const cloneProfileCheckbox = document.getElementById('cloneProfile');
     const cloneMessagesCheckbox = document.getElementById('cloneMessages');
     const cloneAttachmentsCheckbox = document.getElementById('cloneAttachments');
-    const cleanTargetCheckbox = document.getElementById('cleanTarget');
     const attachmentsRow = document.getElementById('attachmentsRow');
     const attachmentsBadge = document.getElementById('attachmentsBadge');
     const attachmentsDesc = document.getElementById('attachmentsDesc');
     const msgOptStatusBadge = document.getElementById('msgOptStatusBadge');
-    const cleanWarningPill = document.getElementById('cleanWarningPill');
     const messageSettingsDrawer = document.getElementById('messageSettingsDrawer');
     const msgLimitInput = document.getElementById('msgLimit');
     const msgDelayInput = document.getElementById('msgDelay');
@@ -53,6 +52,7 @@
     // Accordion
     const advancedToggleBtn = document.getElementById('advancedToggleBtn');
     const advancedPanel = document.getElementById('advancedPanel');
+    const advancedChevron = document.getElementById('advancedChevron');
 
     // Buttons
     const startBtn = document.getElementById('startBtn');
@@ -94,7 +94,6 @@
     const confirmModal = document.getElementById('confirmModal');
     const confirmSourceId = document.getElementById('confirmSourceId');
     const confirmTargetId = document.getElementById('confirmTargetId');
-    const confirmCleanNotice = document.getElementById('confirmCleanNotice');
     const proceedConfirmBtn = document.getElementById('proceedConfirmBtn');
     const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
 
@@ -161,7 +160,7 @@
         try {
             localStorage.setItem('discloner-theme', theme);
         } catch (e) {
-            // Storage quota or sandboxed
+            // Sandboxed environment
         }
     }
 
@@ -207,7 +206,7 @@
         mobileMenuBtn.addEventListener('click', toggleMobileMenu);
     }
 
-    // Modal Triggers from Navigation
+    // Modal Triggers
     function openModal(modal) {
         if (!modal) return;
         modal.classList.remove('hidden');
@@ -248,36 +247,36 @@
 
     function applyPreset(preset) {
         if (preset === 'standard') {
-            cloneRolesCheckbox.checked = true;
-            cloneChannelsCheckbox.checked = true;
-            clonePermissionsCheckbox.checked = true;
-            cloneProfileCheckbox.checked = true;
-            cloneMessagesCheckbox.checked = false;
-            cleanTargetCheckbox.checked = false;
+            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = true;
+            if (cloneRolesCheckbox) cloneRolesCheckbox.checked = true;
+            if (cloneChannelsCheckbox) cloneChannelsCheckbox.checked = true;
+            if (clonePermissionsCheckbox) clonePermissionsCheckbox.checked = true;
+            if (cloneProfileCheckbox) cloneProfileCheckbox.checked = true;
+            if (cloneMessagesCheckbox) cloneMessagesCheckbox.checked = false;
             syncMessageOptionUI();
             showToast('Applied preset: Full Server Architecture', 'info');
         } else if (preset === 'complete-archive') {
-            cloneRolesCheckbox.checked = true;
-            cloneChannelsCheckbox.checked = true;
-            clonePermissionsCheckbox.checked = true;
-            cloneProfileCheckbox.checked = true;
-            cloneMessagesCheckbox.checked = true;
+            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = true;
+            if (cloneRolesCheckbox) cloneRolesCheckbox.checked = true;
+            if (cloneChannelsCheckbox) cloneChannelsCheckbox.checked = true;
+            if (clonePermissionsCheckbox) clonePermissionsCheckbox.checked = true;
+            if (cloneProfileCheckbox) cloneProfileCheckbox.checked = true;
+            if (cloneMessagesCheckbox) cloneMessagesCheckbox.checked = true;
             syncMessageOptionUI();
-            cloneAttachmentsCheckbox.checked = true;
-            msgLimitInput.value = 25;
-            limitBadge.textContent = '25';
+            if (cloneAttachmentsCheckbox) cloneAttachmentsCheckbox.checked = true;
+            if (msgLimitInput) msgLimitInput.value = 25;
+            if (limitBadge) limitBadge.textContent = '25';
             showToast('Applied preset: Complete Server Archive', 'warning');
         } else if (preset === 'roles-only') {
-            cloneRolesCheckbox.checked = true;
-            cloneChannelsCheckbox.checked = false;
-            clonePermissionsCheckbox.checked = true;
-            cloneProfileCheckbox.checked = false;
-            cloneMessagesCheckbox.checked = false;
-            cleanTargetCheckbox.checked = false;
+            if (cleanTargetCheckbox) cleanTargetCheckbox.checked = true;
+            if (cloneRolesCheckbox) cloneRolesCheckbox.checked = true;
+            if (cloneChannelsCheckbox) cloneChannelsCheckbox.checked = false;
+            if (clonePermissionsCheckbox) clonePermissionsCheckbox.checked = true;
+            if (cloneProfileCheckbox) cloneProfileCheckbox.checked = false;
+            if (cloneMessagesCheckbox) cloneMessagesCheckbox.checked = false;
             syncMessageOptionUI();
             showToast('Applied preset: Roles & Permissions Only', 'info');
         }
-        syncCleanTargetUI();
     }
 
     // Global Modal Escape and Backdrop Handlers
@@ -336,8 +335,6 @@
     }
 
     // Snowflake Validation Helpers
-    const SNOWFLAKE_REGEX = /^[0-9]{17,20}$/;
-
     function validateSnowflakeInput(inputEl, feedbackEl, fieldName) {
         if (!inputEl || !feedbackEl) return true;
         const val = inputEl.value.trim();
@@ -357,14 +354,14 @@
         }
 
         if (val.length < 17 || val.length > 20) {
-            feedbackEl.textContent = `✕ Must be 17–20 digits (current: ${val.length})`;
+            feedbackEl.textContent = `✕ Must be 17–20 digits (${val.length} digits)`;
             feedbackEl.className = 'validation-feedback invalid';
             inputEl.classList.add('input-invalid');
             inputEl.classList.remove('input-valid');
             return false;
         }
 
-        feedbackEl.textContent = '✓ Valid Discord Snowflake';
+        feedbackEl.textContent = '✓ Valid Discord ID';
         feedbackEl.className = 'validation-feedback valid';
         inputEl.classList.remove('input-invalid');
         inputEl.classList.add('input-valid');
@@ -412,17 +409,16 @@
 
     // Message Cloning Dependency UX (OFF by default)
     function syncMessageOptionUI() {
+        if (!cloneMessagesCheckbox) return;
         const isMessagesEnabled = cloneMessagesCheckbox.checked;
 
         if (isMessagesEnabled) {
-            // Smoothly expand settings drawer
-            messageSettingsDrawer.classList.remove('collapsed');
+            if (messageSettingsDrawer) messageSettingsDrawer.classList.remove('collapsed');
             if (msgOptStatusBadge) {
                 msgOptStatusBadge.textContent = 'Active';
                 msgOptStatusBadge.classList.add('active');
             }
 
-            // Enable attachments row
             if (cloneAttachmentsCheckbox) {
                 cloneAttachmentsCheckbox.disabled = false;
             }
@@ -437,14 +433,12 @@
                 attachmentsDesc.textContent = 'Synchronize message files, images, and embeds';
             }
         } else {
-            // Smoothly collapse settings drawer
-            messageSettingsDrawer.classList.add('collapsed');
+            if (messageSettingsDrawer) messageSettingsDrawer.classList.add('collapsed');
             if (msgOptStatusBadge) {
                 msgOptStatusBadge.textContent = 'Optional';
                 msgOptStatusBadge.classList.remove('active');
             }
 
-            // Disable attachments row
             if (cloneAttachmentsCheckbox) {
                 cloneAttachmentsCheckbox.disabled = true;
                 cloneAttachmentsCheckbox.checked = false;
@@ -464,36 +458,23 @@
 
     if (cloneMessagesCheckbox) {
         cloneMessagesCheckbox.addEventListener('change', syncMessageOptionUI);
-        // Initialize on load
         syncMessageOptionUI();
     }
 
-    // Advanced Accordion & Clean Target Warning
+    // Advanced Accordion Toggle
     if (advancedToggleBtn && advancedPanel) {
         advancedToggleBtn.addEventListener('click', () => {
             const isCollapsed = advancedPanel.classList.contains('collapsed');
             if (isCollapsed) {
                 advancedPanel.classList.remove('collapsed');
                 advancedToggleBtn.setAttribute('aria-expanded', 'true');
+                if (advancedChevron) advancedChevron.style.transform = 'rotate(90deg)';
             } else {
                 advancedPanel.classList.add('collapsed');
                 advancedToggleBtn.setAttribute('aria-expanded', 'false');
+                if (advancedChevron) advancedChevron.style.transform = 'rotate(0deg)';
             }
         });
-    }
-
-    function syncCleanTargetUI() {
-        if (!cleanTargetCheckbox || !cleanWarningPill) return;
-        if (cleanTargetCheckbox.checked) {
-            cleanWarningPill.classList.remove('hidden');
-        } else {
-            cleanWarningPill.classList.add('hidden');
-        }
-    }
-
-    if (cleanTargetCheckbox) {
-        cleanTargetCheckbox.addEventListener('change', syncCleanTargetUI);
-        syncCleanTargetUI();
     }
 
     // ==========================================================================
@@ -552,11 +533,6 @@
         // Display Confirmation Modal
         confirmSourceId.textContent = sourceId;
         confirmTargetId.textContent = targetId;
-        if (cleanTargetCheckbox.checked) {
-            confirmCleanNotice.classList.remove('hidden');
-        } else {
-            confirmCleanNotice.classList.add('hidden');
-        }
         openModal(confirmModal);
     });
 
@@ -575,15 +551,15 @@
             sourceId: sourceIdInput.value.trim(),
             targetId: targetIdInput.value.trim(),
             options: {
-                cloneRoles: cloneRolesCheckbox.checked,
-                cloneChannels: cloneChannelsCheckbox.checked,
-                clonePermissions: clonePermissionsCheckbox.checked,
-                cloneProfile: cloneProfileCheckbox.checked,
-                cloneMessages: cloneMessagesCheckbox.checked,
-                cloneAttachments: cloneMessagesCheckbox.checked && cloneAttachmentsCheckbox.checked,
-                cleanTarget: cleanTargetCheckbox.checked,
-                msgLimit: parseInt(msgLimitInput.value, 10) || 15,
-                msgDelay: parseInt(msgDelayInput.value, 10) || 1000
+                cleanTarget: cleanTargetCheckbox ? cleanTargetCheckbox.checked : true,
+                cloneRoles: cloneRolesCheckbox ? cloneRolesCheckbox.checked : true,
+                cloneChannels: cloneChannelsCheckbox ? cloneChannelsCheckbox.checked : true,
+                clonePermissions: clonePermissionsCheckbox ? clonePermissionsCheckbox.checked : true,
+                cloneProfile: cloneProfileCheckbox ? cloneProfileCheckbox.checked : true,
+                cloneMessages: cloneMessagesCheckbox ? cloneMessagesCheckbox.checked : false,
+                cloneAttachments: cloneMessagesCheckbox && cloneAttachmentsCheckbox ? (cloneMessagesCheckbox.checked && cloneAttachmentsCheckbox.checked) : false,
+                msgLimit: msgLimitInput ? (parseInt(msgLimitInput.value, 10) || 15) : 15,
+                msgDelay: msgDelayInput ? (parseInt(msgDelayInput.value, 10) || 500) : 500
             }
         };
 
@@ -610,25 +586,20 @@
     function setRunningState(running) {
         isRunning = running;
 
-        // Toggle Buttons
         if (running) {
             startBtn.classList.add('hidden');
             cancelBtn.classList.remove('hidden');
             
-            // Switch Telemetry View
             telemetryEmptyState.classList.add('hidden');
             telemetryActiveView.classList.remove('hidden');
             
-            // Disable Inputs
             setFormDisabled(true);
 
-            // Start Timer
             operationStartTime = Date.now();
             if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(updateElapsedTimer, 1000);
             updateElapsedTimer();
 
-            // Pulse stage dot
             if (stageDot) stageDot.classList.add('pulsing');
         } else {
             startBtn.classList.remove('hidden');
@@ -647,19 +618,19 @@
         userTokenInput.disabled = disabled;
         sourceIdInput.disabled = disabled;
         targetIdInput.disabled = disabled;
-        cloneRolesCheckbox.disabled = disabled;
-        cloneChannelsCheckbox.disabled = disabled;
-        clonePermissionsCheckbox.disabled = disabled;
-        cloneProfileCheckbox.disabled = disabled;
-        cloneMessagesCheckbox.disabled = disabled;
+        if (cleanTargetCheckbox) cleanTargetCheckbox.disabled = disabled;
+        if (cloneRolesCheckbox) cloneRolesCheckbox.disabled = disabled;
+        if (cloneChannelsCheckbox) cloneChannelsCheckbox.disabled = disabled;
+        if (clonePermissionsCheckbox) clonePermissionsCheckbox.disabled = disabled;
+        if (cloneProfileCheckbox) cloneProfileCheckbox.disabled = disabled;
+        if (cloneMessagesCheckbox) cloneMessagesCheckbox.disabled = disabled;
         if (!disabled) {
             syncMessageOptionUI();
         } else {
-            cloneAttachmentsCheckbox.disabled = true;
+            if (cloneAttachmentsCheckbox) cloneAttachmentsCheckbox.disabled = true;
         }
-        cleanTargetCheckbox.disabled = disabled;
-        msgLimitInput.disabled = disabled;
-        msgDelayInput.disabled = disabled;
+        if (msgLimitInput) msgLimitInput.disabled = disabled;
+        if (msgDelayInput) msgDelayInput.disabled = disabled;
     }
 
     function updateElapsedTimer() {
@@ -673,7 +644,7 @@
     function updateLiveStatCounts() {
         if (liveStatRoles) liveStatRoles.textContent = statCounters.roles;
         if (liveStatChannels) liveStatChannels.textContent = statCounters.channels;
-        if (liveStatMessages) liveStatMessages.textContent = cloneMessagesCheckbox.checked ? statCounters.messages : '0';
+        if (liveStatMessages) liveStatMessages.textContent = (cloneMessagesCheckbox && cloneMessagesCheckbox.checked) ? statCounters.messages : '0';
         if (liveStatWarnings) liveStatWarnings.textContent = statCounters.warnings;
     }
 
@@ -707,7 +678,6 @@
         const level = entry.level || entry.type || 'info';
         appendLog(level, entry.message, entry.detail, entry.timestamp);
 
-        // Update live stats from log patterns
         if (level === 'warning') {
             statCounters.warnings++;
         }
@@ -737,7 +707,7 @@
         if (statChannels) statChannels.textContent = stats.channelsCreated ?? statCounters.channels;
         
         if (statMessages) {
-            if (cloneMessagesCheckbox.checked) {
+            if (cloneMessagesCheckbox && cloneMessagesCheckbox.checked) {
                 statMessages.textContent = stats.messagesCopied ?? stats.messagesCloned ?? statCounters.messages;
             } else {
                 statMessages.textContent = 'Disabled';
@@ -774,7 +744,7 @@
     }
 
     // ==========================================================================
-    // 7. Activity Console Engine (Filters, Search, Inset Terminal)
+    // 7. Activity Console Engine
     // ==========================================================================
 
     function appendLog(level, message, detail, timestamp) {
@@ -841,7 +811,6 @@
 
         logStream.appendChild(entry);
 
-        // Keep DOM clean by capping rendered elements
         while (logStream.children.length > MAX_DOM_LOGS) {
             logStream.removeChild(logStream.firstChild);
         }
@@ -880,7 +849,7 @@
         }
     }
 
-    // Filters and Search
+    // Filter Chips
     filterPills.forEach(pill => {
         pill.addEventListener('click', () => {
             filterPills.forEach(p => p.classList.remove('active'));

@@ -51,9 +51,9 @@
                 <!-- Desktop Navigation Links -->
                 <nav class="desktop-nav" aria-label="Main Navigation">
                     <a href="#appRoot" class="nav-link active" id="navHome">Home</a>
-                    <button type="button" class="nav-link-btn" id="navTemplatesBtn">Templates</button>
+                    <button type="button" class="nav-link-btn" id="navTemplatesBtn">Presets</button>
                     <button type="button" class="nav-link-btn" id="navGuidesBtn">Guides</button>
-                    <button type="button" class="nav-link-btn" id="navSupportBtn">Support</button>
+                    <button type="button" class="nav-link-btn" id="navSupportBtn">About</button>
                 </nav>
 
                 <!-- Header Actions: Status, Theme Slider, Mobile Hamburger -->
@@ -119,13 +119,13 @@
                     </button>
                     <button type="button" class="mobile-nav-item" id="mobileNavSupport">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                        <span>Support & About</span>
+                        <span>About DISCLONER</span>
                     </button>
                 </nav>
             </div>
         </header>
 
-        <!-- Main Hero Section -->
+        <!-- Hero Section -->
         <section class="hero-section">
             <div class="hero-content">
                 <div class="hero-badge">
@@ -137,28 +137,23 @@
                     <span class="hero-accent">Precisely.</span>
                 </h1>
                 <p class="hero-subtitle">
-                    Seamlessly replicate Discord channels, roles, permission overwrites, and branding with real-time telemetry.
+                    Replicate Discord channels, roles, permission bitfields, and assets with real-time telemetry.
                 </p>
 
-                <!-- Workflow Roadmap Indicator -->
+                <!-- Clean Workflow Stepper -->
                 <div class="workflow-stepper" aria-label="Migration Workflow">
                     <div class="step-chip active">
                         <span class="step-chip-num">1</span>
-                        <span class="step-chip-text">Source</span>
+                        <span class="step-chip-text">Token</span>
                     </div>
                     <span class="step-divider" aria-hidden="true">→</span>
                     <div class="step-chip active">
                         <span class="step-chip-num">2</span>
-                        <span class="step-chip-text">Target</span>
+                        <span class="step-chip-text">Source & Target</span>
                     </div>
                     <span class="step-divider" aria-hidden="true">→</span>
                     <div class="step-chip active">
                         <span class="step-chip-num">3</span>
-                        <span class="step-chip-text">Configure</span>
-                    </div>
-                    <span class="step-divider" aria-hidden="true">→</span>
-                    <div class="step-chip">
-                        <span class="step-chip-num">4</span>
                         <span class="step-chip-text">Clone</span>
                     </div>
                 </div>
@@ -168,12 +163,12 @@
         <!-- Main Dashboard Workspace -->
         <main class="dashboard-grid" id="mainDashboard">
             
-            <!-- Left Column: Configuration Controls -->
-            <section class="workspace-col config-column" aria-label="Configuration and Settings">
+            <!-- Left Column: Streamlined Migration Card with Advanced Settings Drawer -->
+            <section class="workspace-col config-column" aria-label="Migration Setup">
                 <form id="clonerForm" autocomplete="off">
                     
-                    <!-- 1. Authentication Credentials Card -->
-                    <div class="neu-card" id="authCard">
+                    <!-- Unified Clean Setup Card -->
+                    <div class="neu-card" id="migrationSetupCard">
                         <div class="neu-card-header">
                             <div class="card-icon-bubble">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -182,12 +177,13 @@
                                 </svg>
                             </div>
                             <div class="card-header-titles">
-                                <h2 class="card-title">Authentication Token</h2>
-                                <p class="card-desc">Discord authorization credential with access to both guilds</p>
+                                <h2 class="card-title">Server Migration Setup</h2>
+                                <p class="card-desc">Enter authorization token and source/target server IDs</p>
                             </div>
                         </div>
 
                         <div class="neu-card-body">
+                            <!-- 1. Token Input -->
                             <div class="form-group">
                                 <label for="userToken" class="field-label">
                                     <span>Discord User Token</span>
@@ -222,30 +218,11 @@
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="helper-icon">
                                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                                     </svg>
-                                    <span>Tokens are held strictly in memory for this session and never persisted or stored.</span>
+                                    <span>Session ephemeral: token is held in-memory and never stored.</span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- 2. Source → Target Server Routing Card -->
-                    <div class="neu-card" id="serversCard">
-                        <div class="neu-card-header">
-                            <div class="card-icon-bubble">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
-                                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
-                                    <line x1="6" y1="6" x2="6.01" y2="6"/>
-                                    <line x1="6" y1="18" x2="6.01" y2="18"/>
-                                </svg>
-                            </div>
-                            <div class="card-header-titles">
-                                <h2 class="card-title">Server Routing</h2>
-                                <p class="card-desc">Specify origin source and destination target Discord servers</p>
-                            </div>
-                        </div>
-
-                        <div class="neu-card-body">
+                            <!-- 2. Source → Target Server Routing -->
                             <div class="routing-layout">
                                 <!-- Source Server Field -->
                                 <div class="form-group routing-field">
@@ -259,7 +236,7 @@
                                             type="text" 
                                             id="sourceId" 
                                             name="sourceId"
-                                            placeholder="e.g. 110293847561829401" 
+                                            placeholder="17-20 digit ID" 
                                             required 
                                             maxlength="22"
                                             inputmode="numeric"
@@ -267,10 +244,9 @@
                                         >
                                     </div>
                                     <div class="validation-feedback" id="sourceFeedback"></div>
-                                    <span class="field-subtext">Origin guild to copy structure and assets from</span>
                                 </div>
 
-                                <!-- Directional Bridge Indicator -->
+                                <!-- Directional Bridge Arrow -->
                                 <div class="routing-arrow-wrapper" aria-hidden="true">
                                     <div class="routing-arrow-badge">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="arrow-desktop">
@@ -296,7 +272,7 @@
                                             type="text" 
                                             id="targetId" 
                                             name="targetId"
-                                            placeholder="e.g. 129384756102938475" 
+                                            placeholder="17-20 digit ID" 
                                             required 
                                             maxlength="22"
                                             inputmode="numeric"
@@ -304,160 +280,10 @@
                                         >
                                     </div>
                                     <div class="validation-feedback" id="targetFeedback"></div>
-                                    <span class="field-subtext">Destination server where channels and roles are replicated</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 3. Migration Scope & Options Card -->
-                    <div class="neu-card" id="optionsCard">
-                        <div class="neu-card-header">
-                            <div class="card-icon-bubble">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="9 11 12 14 22 4"/>
-                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                                </svg>
-                            </div>
-                            <div class="card-header-titles">
-                                <h2 class="card-title">Clone Configuration</h2>
-                                <p class="card-desc">Select specific components to mirror across servers</p>
-                            </div>
-                        </div>
-
-                        <div class="neu-card-body">
-                            <div class="options-list">
-                                <!-- Option 1: Roles (Default ON) -->
-                                <label class="neu-option-row" for="cloneRoles">
-                                    <div class="option-text-group">
-                                        <div class="option-title-row">
-                                            <span class="option-title">Roles & Hierarchy</span>
-                                            <span class="badge-opt-status active">Core</span>
-                                        </div>
-                                        <p class="option-desc">Mirror roles, colors, hoist settings, and base permission bitfields</p>
-                                    </div>
-                                    <div class="neu-toggle">
-                                        <input type="checkbox" id="cloneRoles" checked>
-                                        <span class="neu-toggle-slider"></span>
-                                    </div>
-                                </label>
-
-                                <!-- Option 2: Channels (Default ON) -->
-                                <label class="neu-option-row" for="cloneChannels">
-                                    <div class="option-text-group">
-                                        <div class="option-title-row">
-                                            <span class="option-title">Channels & Categories</span>
-                                            <span class="badge-opt-status active">Core</span>
-                                        </div>
-                                        <p class="option-desc">Mirror category trees, text, voice, announcement channels, and topics</p>
-                                    </div>
-                                    <div class="neu-toggle">
-                                        <input type="checkbox" id="cloneChannels" checked>
-                                        <span class="neu-toggle-slider"></span>
-                                    </div>
-                                </label>
-
-                                <!-- Option 3: Permissions (Default ON) -->
-                                <label class="neu-option-row" for="clonePermissions">
-                                    <div class="option-text-group">
-                                        <div class="option-title-row">
-                                            <span class="option-title">Permissions & Overwrites</span>
-                                        </div>
-                                        <p class="option-desc">Preserve role-specific channel privacy, hidden categories, and overrides</p>
-                                    </div>
-                                    <div class="neu-toggle">
-                                        <input type="checkbox" id="clonePermissions" checked>
-                                        <span class="neu-toggle-slider"></span>
-                                    </div>
-                                </label>
-
-                                <!-- Option 4: Server Profile (Default ON) -->
-                                <label class="neu-option-row" for="cloneProfile">
-                                    <div class="option-text-group">
-                                        <div class="option-title-row">
-                                            <span class="option-title">Server Profile & Assets</span>
-                                        </div>
-                                        <p class="option-desc">Synchronize server title name, 4096px icon avatar, and server banner</p>
-                                    </div>
-                                    <div class="neu-toggle">
-                                        <input type="checkbox" id="cloneProfile" checked>
-                                        <span class="neu-toggle-slider"></span>
-                                    </div>
-                                </label>
-
-                                <!-- Option 5: Message History (MANDATORY DEFAULT: OFF) -->
-                                <label class="neu-option-row highlight-row" for="cloneMessages">
-                                    <div class="option-text-group">
-                                        <div class="option-title-row">
-                                            <span class="option-title">Message History (Webhooks)</span>
-                                            <span class="badge-opt-status" id="msgOptStatusBadge">Optional</span>
-                                        </div>
-                                        <p class="option-desc">Clone recent chat logs from source channels using webhooks with author profiles</p>
-                                    </div>
-                                    <div class="neu-toggle">
-                                        <!-- DEFAULT OFF -->
-                                        <input type="checkbox" id="cloneMessages">
-                                        <span class="neu-toggle-slider"></span>
-                                    </div>
-                                </label>
-
-                                <!-- Option 6: Attachments (Disabled when Messages is OFF) -->
-                                <label class="neu-option-row disabled-option" for="cloneAttachments" id="attachmentsRow">
-                                    <div class="option-text-group">
-                                        <div class="option-title-row">
-                                            <span class="option-title">Message Attachments</span>
-                                            <span class="badge-opt-status disabled" id="attachmentsBadge">Disabled</span>
-                                        </div>
-                                        <p class="option-desc" id="attachmentsDesc">Available when Message History is enabled</p>
-                                    </div>
-                                    <div class="neu-toggle">
-                                        <!-- DEFAULT OFF & DISABLED -->
-                                        <input type="checkbox" id="cloneAttachments" disabled>
-                                        <span class="neu-toggle-slider"></span>
-                                    </div>
-                                </label>
-                            </div>
-
-                            <!-- Animated Message Settings Drawer (Smooth Expansion when cloneMessages === true) -->
-                            <div class="message-settings-drawer collapsed" id="messageSettingsDrawer">
-                                <div class="drawer-inner-card">
-                                    <div class="drawer-header">
-                                        <div class="drawer-title-group">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="drawer-icon">
-                                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                                            </svg>
-                                            <span class="drawer-title">Message Migration Tuning</span>
-                                        </div>
-                                        <span class="badge-tag">ACTIVE</span>
-                                    </div>
-
-                                    <div class="drawer-body-grid">
-                                        <div class="form-group">
-                                            <div class="range-header">
-                                                <label for="msgLimit" class="range-label">Messages Per Channel</label>
-                                                <span class="range-val-badge" id="limitBadge">15</span>
-                                            </div>
-                                            <div class="neu-range-wrapper">
-                                                <input type="range" id="msgLimit" min="1" max="100" value="15" class="neu-range-slider">
-                                            </div>
-                                            <span class="field-subtext">Recent chat depth fetched per text channel (1 - 100)</span>
-                                        </div>
-
-                                        <div class="form-group">
-                                            <div class="range-header">
-                                                <label for="msgDelay" class="range-label">Webhook Migration Pacing</label>
-                                                <span class="range-val-badge" id="delayBadge">1000ms</span>
-                                            </div>
-                                            <div class="neu-range-wrapper">
-                                                <input type="range" id="msgDelay" min="300" max="3000" step="100" value="1000" class="neu-range-slider">
-                                            </div>
-                                            <span class="field-subtext">Pacing delay between webhook writes to respect Discord rate limits</span>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Advanced Settings Accordion (CLOSED by default) -->
+                            <!-- 3. Advanced Configuration Accordion (Houses all scope options & sliders) -->
                             <div class="advanced-accordion-section">
                                 <button type="button" class="advanced-accordion-btn" id="advancedToggleBtn" aria-expanded="false" aria-controls="advancedPanel">
                                     <div class="accordion-left">
@@ -465,47 +291,157 @@
                                             <circle cx="12" cy="12" r="3"/>
                                             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                                         </svg>
-                                        <span class="accordion-title">Advanced Settings</span>
+                                        <span class="accordion-title">Advanced Configuration</span>
                                     </div>
                                     <div class="accordion-right">
-                                        <span class="accordion-subtext">Target Behavior</span>
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="chevron-icon" id="advancedChevron">
                                             <polyline points="9 18 15 12 9 6"/>
                                         </svg>
                                     </div>
                                 </button>
 
-                                <!-- Collapsible Panel (CLOSED by default) -->
+                                <!-- Collapsible Slidebar Panel (Closed by default) -->
                                 <div class="advanced-panel-content collapsed" id="advancedPanel">
                                     <div class="advanced-panel-inner">
-                                        <div class="target-behavior-block">
-                                            <div class="block-header-row">
-                                                <span class="block-tag">TARGET BEHAVIOR</span>
-                                            </div>
-
-                                            <label class="neu-option-row warning-opt-row" for="cleanTarget">
+                                        <div class="options-list">
+                                            <!-- Option 0: Clean Target Server (Default ON) -->
+                                            <label class="neu-option-row" for="cleanTarget">
                                                 <div class="option-text-group">
                                                     <div class="option-title-row">
-                                                        <span class="option-title">Clean Target Server Before Clone</span>
-                                                        <span class="badge-opt-status warning-badge" id="cleanWarningBadge">Destructive</span>
+                                                        <span class="option-title">Clean Target Server</span>
+                                                        <span class="badge-opt-status active">Default ON</span>
                                                     </div>
-                                                    <p class="option-desc">Deletes existing channels and custom roles from target guild prior to synchronization</p>
+                                                    <p class="option-desc">Purge existing channels & custom roles in target before replication</p>
                                                 </div>
                                                 <div class="neu-toggle">
-                                                    <!-- MANDATORY DEFAULT: OFF -->
-                                                    <input type="checkbox" id="cleanTarget">
+                                                    <input type="checkbox" id="cleanTarget" name="cleanTarget" checked>
                                                     <span class="neu-toggle-slider"></span>
                                                 </div>
                                             </label>
 
-                                            <!-- Dynamic Warning Pill when cleanTarget is checked -->
-                                            <div class="clean-warning-pill hidden" id="cleanWarningPill">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="warning-icon">
-                                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                                                    <line x1="12" y1="9" x2="12" y2="13"/>
-                                                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                                                </svg>
-                                                <span>Caution: Existing channels & roles in the target guild will be deleted before cloning.</span>
+                                            <!-- Option 1: Roles -->
+                                            <label class="neu-option-row" for="cloneRoles">
+                                                <div class="option-text-group">
+                                                    <div class="option-title-row">
+                                                        <span class="option-title">Roles & Hierarchy</span>
+                                                        <span class="badge-opt-status active">Core</span>
+                                                    </div>
+                                                    <p class="option-desc">Mirror roles, colors, hoist settings, and base permission bitfields</p>
+                                                </div>
+                                                <div class="neu-toggle">
+                                                    <input type="checkbox" id="cloneRoles" checked>
+                                                    <span class="neu-toggle-slider"></span>
+                                                </div>
+                                            </label>
+
+                                            <!-- Option 2: Channels -->
+                                            <label class="neu-option-row" for="cloneChannels">
+                                                <div class="option-text-group">
+                                                    <div class="option-title-row">
+                                                        <span class="option-title">Channels & Categories</span>
+                                                        <span class="badge-opt-status active">Core</span>
+                                                    </div>
+                                                    <p class="option-desc">Mirror category trees, text, voice, announcement channels, and topics</p>
+                                                </div>
+                                                <div class="neu-toggle">
+                                                    <input type="checkbox" id="cloneChannels" checked>
+                                                    <span class="neu-toggle-slider"></span>
+                                                </div>
+                                            </label>
+
+                                            <!-- Option 3: Permissions -->
+                                            <label class="neu-option-row" for="clonePermissions">
+                                                <div class="option-text-group">
+                                                    <div class="option-title-row">
+                                                        <span class="option-title">Permissions & Overwrites</span>
+                                                    </div>
+                                                    <p class="option-desc">Preserve role-specific channel privacy, hidden categories, and overrides</p>
+                                                </div>
+                                                <div class="neu-toggle">
+                                                    <input type="checkbox" id="clonePermissions" checked>
+                                                    <span class="neu-toggle-slider"></span>
+                                                </div>
+                                            </label>
+
+                                            <!-- Option 4: Server Profile -->
+                                            <label class="neu-option-row" for="cloneProfile">
+                                                <div class="option-text-group">
+                                                    <div class="option-title-row">
+                                                        <span class="option-title">Server Profile & Assets</span>
+                                                    </div>
+                                                    <p class="option-desc">Synchronize server title name, 4096px icon avatar, and server banner</p>
+                                                </div>
+                                                <div class="neu-toggle">
+                                                    <input type="checkbox" id="cloneProfile" checked>
+                                                    <span class="neu-toggle-slider"></span>
+                                                </div>
+                                            </label>
+
+                                            <!-- Option 5: Message History (Default OFF) -->
+                                            <label class="neu-option-row highlight-row" for="cloneMessages">
+                                                <div class="option-text-group">
+                                                    <div class="option-title-row">
+                                                        <span class="option-title">Message History (Webhooks)</span>
+                                                        <span class="badge-opt-status" id="msgOptStatusBadge">Optional</span>
+                                                    </div>
+                                                    <p class="option-desc">Clone recent chat logs from source channels using webhooks with author profiles</p>
+                                                </div>
+                                                <div class="neu-toggle">
+                                                    <input type="checkbox" id="cloneMessages">
+                                                    <span class="neu-toggle-slider"></span>
+                                                </div>
+                                            </label>
+
+                                            <!-- Option 6: Attachments -->
+                                            <label class="neu-option-row disabled-option" for="cloneAttachments" id="attachmentsRow">
+                                                <div class="option-text-group">
+                                                    <div class="option-title-row">
+                                                        <span class="option-title">Message Attachments</span>
+                                                        <span class="badge-opt-status disabled" id="attachmentsBadge">Disabled</span>
+                                                    </div>
+                                                    <p class="option-desc" id="attachmentsDesc">Available when Message History is enabled</p>
+                                                </div>
+                                                <div class="neu-toggle">
+                                                    <input type="checkbox" id="cloneAttachments" disabled>
+                                                    <span class="neu-toggle-slider"></span>
+                                                </div>
+                                            </label>
+
+                                            <!-- Message Tuning Sub-Drawer -->
+                                            <div class="message-settings-drawer collapsed" id="messageSettingsDrawer">
+                                                <div class="drawer-inner-card">
+                                                    <div class="drawer-header">
+                                                        <div class="drawer-title-group">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="drawer-icon">
+                                                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                                            </svg>
+                                                            <span class="drawer-title">Message Tuning</span>
+                                                        </div>
+                                                        <span class="badge-tag">ACTIVE</span>
+                                                    </div>
+
+                                                    <div class="drawer-body-grid">
+                                                        <div class="form-group">
+                                                            <div class="range-header">
+                                                                <label for="msgLimit" class="range-label">Messages Per Channel</label>
+                                                                <span class="range-val-badge" id="limitBadge">15</span>
+                                                            </div>
+                                                            <div class="neu-range-wrapper">
+                                                                <input type="range" id="msgLimit" min="1" max="100" value="15" class="neu-range-slider">
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="form-group">
+                                                            <div class="range-header">
+                                                                <label for="msgDelay" class="range-label">Webhook Migration Pacing</label>
+                                                                <span class="range-val-badge" id="delayBadge">500ms</span>
+                                                            </div>
+                                                            <div class="neu-range-wrapper">
+                                                                <input type="range" id="msgDelay" min="200" max="2000" step="50" value="500" class="neu-range-slider">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -514,7 +450,7 @@
                         </div>
                     </div>
 
-                    <!-- 4. Action CTA Buttons -->
+                    <!-- 4. Primary CTA Buttons -->
                     <div class="cta-actions-group">
                         <button type="submit" id="startBtn" class="neu-btn-primary">
                             <span class="btn-inner">
@@ -668,7 +604,7 @@
 
     <!-- Modals System -->
     
-    <!-- 1. Confirmation Modal (Destructive operation / verification) -->
+    <!-- 1. Confirmation Modal -->
     <div class="modal-backdrop hidden" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
         <div class="neu-modal-card">
             <div class="modal-header-icon warning-icon-bg">
@@ -693,14 +629,6 @@
                         <span class="route-label">Target Guild ID:</span>
                         <span class="route-val font-mono" id="confirmTargetId">-</span>
                     </div>
-                </div>
-                <div class="confirm-clean-notice hidden" id="confirmCleanNotice">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="notice-icon">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="8" x2="12" y2="12"/>
-                        <line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                    <span><strong>Clean Target Server</strong> is enabled: existing channels & roles on target will be removed before cloning.</span>
                 </div>
             </div>
             <div class="modal-actions-row">
@@ -791,7 +719,7 @@
                     <div class="step-badge">3</div>
                     <div class="step-body">
                         <h4>Message Synchronization (Optional)</h4>
-                        <p>Message cloning is OFF by default. If enabled, messages are replicated using Discord webhooks with original author names and avatars. Configure pacing to avoid rate limits.</p>
+                        <p>Message cloning is OFF by default. If enabled in Advanced Settings, messages are replicated using Discord webhooks with original author names and avatars.</p>
                     </div>
                 </div>
             </div>
@@ -801,7 +729,7 @@
         </div>
     </div>
 
-    <!-- 4. Preset Templates Modal -->
+    <!-- 4. Presets Modal -->
     <div class="modal-backdrop hidden" id="templatesModal" role="dialog" aria-modal="true" aria-labelledby="templatesTitle">
         <div class="neu-modal-card template-modal">
             <div class="modal-header-simple">
@@ -814,7 +742,7 @@
                     </svg>
                     <h3 class="modal-title" id="templatesTitle">Migration Presets</h3>
                 </div>
-                <button type="button" class="modal-close-btn" id="closeTemplatesBtn" aria-label="Close templates modal">✕</button>
+                <button type="button" class="modal-close-btn" id="closeTemplatesBtn" aria-label="Close presets modal">✕</button>
             </div>
             <div class="modal-scroll-body">
                 <div class="template-grid">
@@ -823,7 +751,7 @@
                             <span class="template-name">Full Server Architecture (Recommended)</span>
                             <span class="badge-tag">DEFAULT</span>
                         </div>
-                        <p class="template-desc">Clones roles, channels, category hierarchy, permissions, and server profile. Message history is disabled.</p>
+                        <p class="template-desc">Clones roles, channels, category hierarchy, permissions, and server profile.</p>
                     </button>
 
                     <button type="button" class="template-item-card" data-preset="complete-archive">
@@ -831,14 +759,14 @@
                             <span class="template-name">Complete Server Archive</span>
                             <span class="badge-tag warning-badge">DEEP SYNC</span>
                         </div>
-                        <p class="template-desc">Clones all architecture PLUS recent message history (25 msgs/channel) and attachments via webhooks.</p>
+                        <p class="template-desc">Clones all architecture PLUS recent message history and attachments via webhooks.</p>
                     </button>
 
                     <button type="button" class="template-item-card" data-preset="roles-only">
                         <div class="template-item-header">
                             <span class="template-name">Roles & Permissions Only</span>
                         </div>
-                        <p class="template-desc">Clones only role hierarchy and bitfield permissions without creating channels or copying messages.</p>
+                        <p class="template-desc">Clones only role hierarchy and bitfield permissions without creating channels.</p>
                     </button>
                 </div>
             </div>
@@ -848,14 +776,14 @@
         </div>
     </div>
 
-    <!-- 5. Support & About Modal -->
+    <!-- 5. About Modal -->
     <div class="modal-backdrop hidden" id="supportModal" role="dialog" aria-modal="true" aria-labelledby="supportTitle">
         <div class="neu-modal-card">
             <div class="modal-header-simple">
                 <div class="guide-title-row">
                     <h3 class="modal-title" id="supportTitle">About DISCLONER</h3>
                 </div>
-                <button type="button" class="modal-close-btn" id="closeSupportBtn" aria-label="Close support modal">✕</button>
+                <button type="button" class="modal-close-btn" id="closeSupportBtn" aria-label="Close about modal">✕</button>
             </div>
             <div class="modal-body-content">
                 <p class="modal-desc">
@@ -864,7 +792,7 @@
                 <div class="support-info-box">
                     <div class="support-info-row">
                         <span class="support-info-label">Version:</span>
-                        <span class="support-info-val font-mono">v2.0.0 (Neumorphic Edition)</span>
+                        <span class="support-info-val font-mono">v2.0.0 (Clean Neumorphic)</span>
                     </div>
                     <div class="support-info-row">
                         <span class="support-info-label">Theme Engine:</span>

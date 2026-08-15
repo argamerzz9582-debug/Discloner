@@ -35,7 +35,7 @@ test('normalizeCloneOptions sets sane defaults and clamps limits', () => {
     assert.equal(opts.cloneProfile, true);
     assert.equal(opts.cloneMessages, false); // Default OFF
     assert.equal(opts.cloneAttachments, false); // Default OFF when messages OFF
-    assert.equal(opts.cleanTarget, false); // Default OFF
+    assert.equal(opts.cleanTarget, true); // Default ON
     assert.equal(opts.msgLimit, 15);
     assert.equal(opts.msgDelay, 1000);
 
