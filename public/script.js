@@ -11,14 +11,9 @@
     // DOM Elements - Theme & Navigation
     const htmlElement = document.documentElement;
     const themeToggleBtn = document.getElementById('themeToggleBtn');
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    const mobileNavPanel = document.getElementById('mobileNavPanel');
     const navTemplatesBtn = document.getElementById('navTemplatesBtn');
     const navGuidesBtn = document.getElementById('navGuidesBtn');
     const navSupportBtn = document.getElementById('navSupportBtn');
-    const mobileNavTemplates = document.getElementById('mobileNavTemplates');
-    const mobileNavGuides = document.getElementById('mobileNavGuides');
-    const mobileNavSupport = document.getElementById('mobileNavSupport');
 
     // DOM Elements - Form & Inputs
     const form = document.getElementById('clonerForm');
@@ -177,41 +172,13 @@
     initTheme();
 
     // ==========================================================================
-    // 2. Navigation & Mobile Menu Handlers
+    // 2. Modals & Preset Handlers
     // ==========================================================================
 
-    function toggleMobileMenu() {
-        if (!mobileNavPanel) return;
-        const isCollapsed = mobileNavPanel.classList.contains('collapsed');
-        if (isCollapsed) {
-            mobileNavPanel.classList.remove('collapsed');
-            mobileNavPanel.setAttribute('aria-hidden', 'false');
-            if (mobileMenuBtn) mobileMenuBtn.setAttribute('aria-expanded', 'true');
-        } else {
-            mobileNavPanel.classList.add('collapsed');
-            mobileNavPanel.setAttribute('aria-hidden', 'true');
-            if (mobileMenuBtn) mobileMenuBtn.setAttribute('aria-expanded', 'false');
-        }
-    }
-
-    function closeMobileMenu() {
-        if (mobileNavPanel) {
-            mobileNavPanel.classList.add('collapsed');
-            mobileNavPanel.setAttribute('aria-hidden', 'true');
-            if (mobileMenuBtn) mobileMenuBtn.setAttribute('aria-expanded', 'false');
-        }
-    }
-
-    if (mobileMenuBtn) {
-        mobileMenuBtn.addEventListener('click', toggleMobileMenu);
-    }
-
-    // Modal Triggers
     function openModal(modal) {
         if (!modal) return;
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
-        closeMobileMenu();
     }
 
     function closeModal(modal) {
@@ -221,17 +188,14 @@
     }
 
     if (navGuidesBtn) navGuidesBtn.addEventListener('click', () => openModal(helpModal));
-    if (mobileNavGuides) mobileNavGuides.addEventListener('click', () => openModal(helpModal));
     if (closeHelpBtn) closeHelpBtn.addEventListener('click', () => closeModal(helpModal));
     if (dismissHelpBtn) dismissHelpBtn.addEventListener('click', () => closeModal(helpModal));
 
     if (navTemplatesBtn) navTemplatesBtn.addEventListener('click', () => openModal(templatesModal));
-    if (mobileNavTemplates) mobileNavTemplates.addEventListener('click', () => openModal(templatesModal));
     if (closeTemplatesBtn) closeTemplatesBtn.addEventListener('click', () => closeModal(templatesModal));
     if (dismissTemplatesBtn) dismissTemplatesBtn.addEventListener('click', () => closeModal(templatesModal));
 
     if (navSupportBtn) navSupportBtn.addEventListener('click', () => openModal(supportModal));
-    if (mobileNavSupport) mobileNavSupport.addEventListener('click', () => openModal(supportModal));
     if (closeSupportBtn) closeSupportBtn.addEventListener('click', () => closeModal(supportModal));
     if (dismissSupportBtn) dismissSupportBtn.addEventListener('click', () => closeModal(supportModal));
 
@@ -287,7 +251,6 @@
             closeModal(helpModal);
             closeModal(templatesModal);
             closeModal(supportModal);
-            closeMobileMenu();
         }
     });
 

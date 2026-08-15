@@ -406,82 +406,6 @@ a {
     transition: left var(--transition-smooth), background-color var(--transition-smooth);
 }
 
-/* Mobile Hamburger Menu */
-.mobile-menu-btn {
-    display: none;
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-md);
-    background-color: var(--surface-raised);
-    box-shadow: var(--shadow-raised-sm);
-    align-items: center;
-    justify-content: center;
-    color: var(--text-primary);
-    min-height: 44px;
-    min-width: 44px;
-    transition: box-shadow var(--transition-fast);
-}
-
-.mobile-menu-btn:hover {
-    box-shadow: var(--shadow-raised-hover);
-}
-
-.hamburger-icon {
-    width: 20px;
-    height: 20px;
-}
-
-/* Mobile Navigation Panel */
-.mobile-nav-panel {
-    border-top: 1px solid var(--border-divider);
-    padding: 0 16px;
-    max-height: 260px;
-    opacity: 1;
-    overflow: hidden;
-    transition: max-height var(--transition-smooth), opacity var(--transition-smooth), padding var(--transition-smooth);
-}
-
-.mobile-nav-panel.collapsed {
-    max-height: 0;
-    opacity: 0;
-    padding: 0 16px;
-    pointer-events: none;
-}
-
-.mobile-nav-links {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 12px 0 16px;
-}
-
-.mobile-nav-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    background-color: var(--surface-raised);
-    box-shadow: var(--shadow-raised-sm);
-    width: 100%;
-    text-align: left;
-    transition: color var(--transition-fast), background-color var(--transition-fast);
-}
-
-.mobile-nav-item svg {
-    width: 18px;
-    height: 18px;
-    color: var(--accent);
-}
-
-.mobile-nav-item:hover, .mobile-nav-item:active {
-    color: var(--text-primary);
-    background-color: var(--surface-hover);
-}
-
 /* 5. Hero Section */
 .hero-section {
     width: 100%;
@@ -2160,8 +2084,32 @@ a {
         display: none;
     }
 
-    .mobile-menu-btn {
-        display: flex;
+    .header-inner {
+        padding: 10px 14px;
+        gap: 10px;
+    }
+
+    .brand-title {
+        font-size: 15px;
+    }
+
+    .brand-subtitle {
+        display: none;
+    }
+
+    .brand-icon-raised {
+        width: 36px;
+        height: 36px;
+    }
+
+    .brand-icon-svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .conn-status-pill {
+        padding: 4px 8px;
+        font-size: 11px;
     }
 
     /* Stack Source and Target vertically on mobile */
@@ -2208,6 +2156,24 @@ a {
 }
 
 @media (max-width: 480px) {
+    .header-inner {
+        padding: 8px 12px;
+    }
+
+    .header-actions {
+        gap: 8px;
+    }
+
+    .conn-status-pill .status-label {
+        display: none;
+    }
+
+    .conn-status-pill {
+        padding: 6px;
+        min-width: 28px;
+        justify-content: center;
+    }
+
     .neu-card {
         padding: 16px;
         border-radius: var(--radius-md);

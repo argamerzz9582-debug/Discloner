@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "node --check server.js",
+    "lint": "node --check server.js services/cloneService.js services/discordService.js services/validationService.js utils/logger.js",
     "start": "node server.js",
     "dev": "node server.js",
     "test": "node --test"

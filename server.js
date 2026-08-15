@@ -10,9 +10,13 @@ import { createLogEntry, sanitizeText } from './utils/logger.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const server = createServer(app);
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+    : '*';
+
 const io = new Server(server, {
     cors: {
-        origin: '*',
+        origin: allowedOrigins,
         methods: ['GET', 'POST']
     }
 });
@@ -161,7 +165,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Discord Server Cloner running on http://0.0.0.0:${PORT}`);
 });
