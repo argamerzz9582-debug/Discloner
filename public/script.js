@@ -179,8 +179,11 @@
     // ==========================================================================
 
     function initTheme() {
-        const savedTheme = localStorage.getItem('discloner-theme') || 'light';
-        applyTheme(savedTheme);
+        // Enforce light theme immediately
+        try {
+            localStorage.setItem('discloner-theme', 'light');
+        } catch (e) {}
+        applyTheme('light');
     }
 
     function applyTheme(theme) {
@@ -533,6 +536,9 @@
             cloneChannels: cloneChannelsCheckbox ? cloneChannelsCheckbox.checked : true,
             clonePermissions: clonePermissionsCheckbox ? clonePermissionsCheckbox.checked : true,
             cloneProfile: cloneProfileCheckbox ? cloneProfileCheckbox.checked : true,
+                cloneEmojis: document.getElementById("cloneEmojis") ? document.getElementById("cloneEmojis").checked : true,
+                cloneStickers: document.getElementById("cloneStickers") ? document.getElementById("cloneStickers").checked : true,
+                cloneWebhooks: document.getElementById("cloneWebhooks") ? document.getElementById("cloneWebhooks").checked : true,
             cloneMessages: cloneMessagesCheckbox ? cloneMessagesCheckbox.checked : false,
             cloneAttachments: cloneAttachmentsCheckbox ? cloneAttachmentsCheckbox.checked : false,
             msgLimit: msgLimitInput ? (parseInt(msgLimitInput.value, 10) || 15) : 15,
@@ -972,6 +978,9 @@
                 cloneChannels: cloneChannelsCheckbox ? cloneChannelsCheckbox.checked : true,
                 clonePermissions: clonePermissionsCheckbox ? clonePermissionsCheckbox.checked : true,
                 cloneProfile: cloneProfileCheckbox ? cloneProfileCheckbox.checked : true,
+                cloneEmojis: document.getElementById("cloneEmojis") ? document.getElementById("cloneEmojis").checked : true,
+                cloneStickers: document.getElementById("cloneStickers") ? document.getElementById("cloneStickers").checked : true,
+                cloneWebhooks: document.getElementById("cloneWebhooks") ? document.getElementById("cloneWebhooks").checked : true,
                 cloneMessages: cloneMessagesCheckbox ? cloneMessagesCheckbox.checked : false,
                 cloneAttachments: cloneMessagesCheckbox && cloneAttachmentsCheckbox ? (cloneMessagesCheckbox.checked && cloneAttachmentsCheckbox.checked) : false,
                 msgLimit: msgLimitInput ? (parseInt(msgLimitInput.value, 10) || 15) : 15,

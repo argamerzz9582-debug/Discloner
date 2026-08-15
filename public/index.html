@@ -343,6 +343,48 @@
                                                 </div>
                                             </label>
 
+                                            <!-- Option 4b: Emojis -->
+                                            <label class="neu-option-row" for="cloneEmojis">
+                                                <div class="option-text-group">
+                                                    <div class="option-title-row">
+                                                        <span class="option-title">Emojis</span>
+                                                    </div>
+                                                    <p class="option-desc">Clone all custom emojis from the source server</p>
+                                                </div>
+                                                <div class="neu-toggle">
+                                                    <input type="checkbox" id="cloneEmojis" checked>
+                                                    <span class="neu-toggle-slider"></span>
+                                                </div>
+                                            </label>
+
+                                            <!-- Option 4c: Stickers -->
+                                            <label class="neu-option-row" for="cloneStickers">
+                                                <div class="option-text-group">
+                                                    <div class="option-title-row">
+                                                        <span class="option-title">Stickers</span>
+                                                    </div>
+                                                    <p class="option-desc">Clone all custom stickers from the source server</p>
+                                                </div>
+                                                <div class="neu-toggle">
+                                                    <input type="checkbox" id="cloneStickers" checked>
+                                                    <span class="neu-toggle-slider"></span>
+                                                </div>
+                                            </label>
+
+                                            <!-- Option 4d: Webhooks -->
+                                            <label class="neu-option-row" for="cloneWebhooks">
+                                                <div class="option-text-group">
+                                                    <div class="option-title-row">
+                                                        <span class="option-title">Webhooks</span>
+                                                    </div>
+                                                    <p class="option-desc">Clone channel webhooks (names and avatars)</p>
+                                                </div>
+                                                <div class="neu-toggle">
+                                                    <input type="checkbox" id="cloneWebhooks" checked>
+                                                    <span class="neu-toggle-slider"></span>
+                                                </div>
+                                            </label>
+
                                             <!-- Option 5: Message History (Default OFF) -->
                                             <label class="neu-option-row highlight-row" for="cloneMessages">
                                                 <div class="option-text-group">
@@ -390,20 +432,20 @@
                                                         <div class="form-group">
                                                             <div class="range-header">
                                                                 <label for="msgLimit" class="range-label">Messages Per Channel</label>
-                                                                <span class="range-val-badge" id="limitBadge">15</span>
+                                                                <span class="range-val-badge" id="limitBadge">1000</span>
                                                             </div>
                                                             <div class="neu-range-wrapper">
-                                                                <input type="range" id="msgLimit" min="1" max="100" value="15" class="neu-range-slider">
+                                                                <input type="range" id="msgLimit" min="1" max="1000" value="1000" class="neu-range-slider">
                                                             </div>
                                                         </div>
 
                                                         <div class="form-group">
                                                             <div class="range-header">
                                                                 <label for="msgDelay" class="range-label">Webhook Migration Pacing</label>
-                                                                <span class="range-val-badge" id="delayBadge">1000ms</span>
+                                                                <span class="range-val-badge" id="delayBadge">0ms</span>
                                                             </div>
                                                             <div class="neu-range-wrapper">
-                                                                <input type="range" id="msgDelay" min="200" max="5000" step="50" value="1000" class="neu-range-slider">
+                                                                <input type="range" id="msgDelay" min="0" max="5000" step="50" value="0" class="neu-range-slider">
                                                             </div>
                                                         </div>
                                                     </div>
@@ -506,7 +548,7 @@
                                 <span class="progress-title">Overall Progress</span>
                                 <span class="progress-percent font-mono" id="progressText">0%</span>
                             </div>
-                            <div class="neu-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressTrack">
+                            <div class="neu-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0" id="progressTrack">
                                 <div class="neu-progress-fill" id="progressBar"></div>
                             </div>
                             <div class="progress-sub-row">

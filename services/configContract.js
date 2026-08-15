@@ -25,11 +25,11 @@ export const DEFAULT_CONFIG = Object.freeze({
     // Range constraints
     limits: Object.freeze({
         minMsgLimit: 1,
-        maxMsgLimit: 100,
-        defaultMsgLimit: 15,
-        minMsgDelay: 200,
+        maxMsgLimit: 1000,
+        defaultMsgLimit: 1000,
+        minMsgDelay: 0,
         maxMsgDelay: 5000,
-        defaultMsgDelay: 1000
+        defaultMsgDelay: 0
     }),
 
     // Safety policies
@@ -85,10 +85,10 @@ export const RELIABILITY_CONFIG = Object.freeze({
         authTimeoutMs: 30000
     }),
     concurrency: Object.freeze({
-        maxJobs: 3,
-        maxOperations: 3,
-        maxMessages: 1,
-        maxCleaner: 2
+        maxJobs: 50,
+        maxOperations: 50,
+        maxMessages: 20,
+        maxCleaner: 20
     })
 });
 

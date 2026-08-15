@@ -235,6 +235,88 @@ export async function executeClone({
         }
 
         // ======================================================================
+        // 6a. CLONING EMOJIS
+        // ======================================================================
+        if (options.cloneEmojis) {
+            checkCancellation();
+            onStage('cloning_emojis', 'Cloning Emojis', 35);
+            emitLog('info', 'Cloning custom emojis...', null, 'cloning_emojis');
+
+            try {
+                const sourceEmojis = await sourceGuild.emojis.fetch();
+                let emojiIdx = 0;
+                for (const emoji of sourceEmojis.values()) {
+                    checkCancellation();
+                    emojiIdx++;
+                    try {
+                        await executeDiscordOperation({
+                            operationName: 'create_emoji',
+                            resourceType: 'emoji',
+                            resourceId: emoji.name,
+                            policy: OPERATION_POLICIES.CREATE,
+                            isCancelled,
+                            execute: async () => {
+                                await targetGuild.emojis.create({
+                                    attachment: emoji.url,
+                                    name: emoji.name
+                                });
+                            },
+                            onRetry: makeRetryHandler('cloning_emojis'),
+                            onRateLimit: makeRateLimitHandler('cloning_emojis')
+                        });
+                        emitLog('success', `Cloned emoji :${emoji.name}:`, null, 'cloning_emojis');
+                    } catch (err) {
+                        emitLog('warning', `Failed to clone emoji ${emoji.name}`, err.message, 'cloning_emojis');
+                    }
+                }
+            } catch (err) {
+                emitLog('error', 'Failed to fetch source emojis', err.message, 'cloning_emojis');
+            }
+        }
+
+        // ======================================================================
+        // 6b. CLONING STICKERS
+        // ======================================================================
+        if (options.cloneStickers) {
+            checkCancellation();
+            onStage('cloning_stickers', 'Cloning Stickers', 38);
+            emitLog('info', 'Cloning custom stickers...', null, 'cloning_stickers');
+
+            try {
+                const sourceStickers = await sourceGuild.stickers.fetch();
+                let stickerIdx = 0;
+                for (const sticker of sourceStickers.values()) {
+                    checkCancellation();
+                    stickerIdx++;
+                    try {
+                        await executeDiscordOperation({
+                            operationName: 'create_sticker',
+                            resourceType: 'sticker',
+                            resourceId: sticker.name,
+                            policy: OPERATION_POLICIES.CREATE,
+                            isCancelled,
+                            execute: async () => {
+                                await targetGuild.stickers.create({
+                                    file: sticker.url,
+                                    name: sticker.name,
+                                    tags: sticker.tags || 'cloned',
+                                    description: sticker.description || ''
+                                });
+                            },
+                            onRetry: makeRetryHandler('cloning_stickers'),
+                            onRateLimit: makeRateLimitHandler('cloning_stickers')
+                        });
+                        emitLog('success', `Cloned sticker ${sticker.name}`, null, 'cloning_stickers');
+                    } catch (err) {
+                        emitLog('warning', `Failed to clone sticker ${sticker.name}`, err.message, 'cloning_stickers');
+                    }
+                }
+            } catch (err) {
+                emitLog('error', 'Failed to fetch source stickers', err.message, 'cloning_stickers');
+            }
+        }
+
+        // ======================================================================
         // 7. CLONING ROLES
         // ======================================================================
         if (options.cloneRoles) {
@@ -527,8 +609,66 @@ export async function executeClone({
         }
 
         // ======================================================================
-        // 11. CLONING MESSAGES (OPTIONAL)
+        // 11. CLONING WEBHOOKS
         // ======================================================================
+        if (options.cloneWebhooks && options.cloneChannels && targetChannelObjects.size > 0) {
+            checkCancellation();
+            onStage('cloning_webhooks', 'Cloning Webhooks', 84);
+            emitLog('info', 'Cloning source webhooks to target channels...', null, 'cloning_webhooks');
+
+            const textChannels = Array.from(targetChannelObjects.entries()).filter(([srcId, tgtCh]) => {
+                const src = sourceGuild.channels.cache.get(srcId);
+                return src && src.isText() && tgtCh && tgtCh.isText();
+            });
+
+            for (const [srcId, targetChannel] of textChannels) {
+                checkCancellation();
+                const sourceChannel = sourceGuild.channels.cache.get(srcId);
+                try {
+                    const sourceWebhooks = await executeDiscordOperation({
+                        operationName: 'fetch_webhooks',
+                        resourceType: 'channel_webhooks',
+                        resourceId: srcId,
+                        policy: OPERATION_POLICIES.READ,
+                        isCancelled,
+                        execute: async () => await sourceChannel.fetchWebhooks(),
+                        onRetry: makeRetryHandler('cloning_webhooks'),
+                        onRateLimit: makeRateLimitHandler('cloning_webhooks')
+                    });
+
+                    if (sourceWebhooks && sourceWebhooks.size > 0) {
+                        for (const wh of sourceWebhooks.values()) {
+                            checkCancellation();
+                            try {
+                                await executeDiscordOperation({
+                                    operationName: 'create_webhook',
+                                    resourceType: 'webhook',
+                                    resourceId: wh.id,
+                                    policy: OPERATION_POLICIES.CREATE,
+                                    isCancelled,
+                                    execute: async () => {
+                                        await targetChannel.createWebhook(wh.name || 'Cloned Webhook', {
+                                            avatar: wh.avatarURL() || undefined
+                                        });
+                                    },
+                                    onRetry: makeRetryHandler('cloning_webhooks'),
+                                    onRateLimit: makeRateLimitHandler('cloning_webhooks')
+                                });
+                                emitLog('success', `Cloned webhook ${wh.name} in #${targetChannel.name}`, null, 'cloning_webhooks');
+                            } catch (err) {
+                                emitLog('warning', `Failed to clone webhook ${wh.name}`, err.message, 'cloning_webhooks');
+                            }
+                        }
+                    }
+                } catch (err) {
+                    emitLog('warning', `Could not fetch webhooks from #${sourceChannel.name}`, err.message, 'cloning_webhooks');
+                }
+            }
+        }
+
+        // ======================================================================
+        // 12. CLONING MESSAGES (OPTIONAL)
+        // =====================================================================
         if (options.cloneMessages && options.cloneChannels && targetChannelObjects.size > 0) {
             checkCancellation();
             const limit = options.msgLimit || 15;
