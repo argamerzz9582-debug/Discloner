@@ -35,10 +35,14 @@ export async function executeClone({
     sourceId,
     targetId,
     options = {},
+    resume = null,
     onStage = () => {},
     onProgress = () => {},
     onLog = () => {},
-    isCancelled = () => false
+    onCheckpoint = () => {},
+    onClient = null,
+    isCancelled = () => false,
+    isPaused = () => false
 }) {
     const manifest = new MigrationManifest(sourceId, targetId, options);
 
@@ -57,6 +61,60 @@ export async function executeClone({
         }
     };
 
+    // ======================================================================
+    // RESUME / PAUSE / CHECKPOINT PLUMBING
+    // ----------------------------------------------------------------------
+    // A checkpoint is only written when the *next* stage begins, so a stage
+    // that dies half-way is never recorded as complete. Finished stages are
+    // skipped on a later attempt, and the destructive cleanup stage is never
+    // replayed.
+    // ======================================================================
+    const completedStages = new Set(Array.isArray(resume?.completedStages) ? resume.completedStages : []);
+    const isResuming = Boolean(resume);
+    const stageDone = (stage) => completedStages.has(stage);
+    let lastStage = null;
+
+    const snapshotMaps = () => ({
+        roles: Object.fromEntries(manifest.roleMap),
+        categories: Object.fromEntries(manifest.categoryMap),
+        channels: Object.fromEntries(manifest.channelMap)
+    });
+
+    const checkpoint = (stage, extra = {}) => {
+        if (!stage || stage === 'completed') return;
+        onCheckpoint({
+            stage,
+            completed: true,
+            maps: snapshotMaps(),
+            cursors: { lastMessageIds: { ...(extra.lastMessageIds || {}) } }
+        });
+    };
+
+    const pauseGate = async () => {
+        if (typeof isPaused !== 'function') return;
+        let announced = false;
+        while (isPaused()) {
+            checkCancellation();
+            if (!announced) {
+                emitLog('info', 'Job paused — waiting for the operator to resume.', 'JOB_PAUSED', 'paused');
+                announced = true;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+    };
+
+    const beginStage = async (stage, label, progress) => {
+        if (lastStage && lastStage !== stage) checkpoint(lastStage);
+        lastStage = stage;
+        await pauseGate();
+        checkCancellation();
+        onStage(stage, label, progress);
+    };
+
+    if (isResuming) {
+        emitLog('info', `Resuming from checkpoint with ${completedStages.size} completed stage(s).`, 'RESUME_START', 'initializing');
+    }
+
     // Shared event handlers for operation executor
     const makeRetryHandler = (stage) => ({ operation, resourceType, attempt, maxAttempts, waitMs }) => {
         manifest.recordRetry(waitMs);
@@ -72,15 +130,16 @@ export async function executeClone({
         // ======================================================================
         // 1. DISCOVERY & INITIALIZATION
         // ======================================================================
-        onStage('initializing', 'Initializing Client Session', 2);
+        await beginStage('initializing', 'Initializing Client Session', 2);
         emitLog('info', 'Starting client session with Discord Gateway...', null, 'initializing');
         client = createDiscordClient();
+        if (typeof onClient === 'function') onClient(client);
 
         // ======================================================================
         // 2. AUTHENTICATING
         // ======================================================================
         checkCancellation();
-        onStage('authenticating', 'Authenticating Credentials', 6);
+        await beginStage('authenticating', 'Authenticating Credentials', 6);
         emitLog('info', 'Authenticating token with Discord...', null, 'authenticating');
 
         const user = await authenticateClient(client, userToken);
@@ -90,7 +149,7 @@ export async function executeClone({
         // 3. VALIDATING SERVERS
         // ======================================================================
         checkCancellation();
-        onStage('validating_servers', 'Detecting Source and Target Guilds', 12);
+        await beginStage('validating_servers', 'Detecting Source and Target Guilds', 12);
         emitLog('info', 'Searching for source & target servers in account cache...', null, 'validating_servers');
 
         const sourceGuild = client.guilds.cache.get(sourceId);
@@ -110,7 +169,7 @@ export async function executeClone({
         // 4. READING SOURCE STRUCTURE
         // ======================================================================
         checkCancellation();
-        onStage('reading_source', 'Reading Source Guild Structure', 18);
+        await beginStage('reading_source', 'Reading Source Guild Structure', 18);
         emitLog('info', 'Fetching roles, channels, categories, and guild configuration...', null, 'reading_source');
 
         try {
@@ -134,13 +193,37 @@ export async function executeClone({
             emitLog('warning', 'Could not pre-fetch full guild cache, using cached structure.', fetchErr.message, 'reading_source');
         }
 
+        // Source-channel -> target-channel objects, populated by the channel
+        // stage and rehydrated from a checkpoint when resuming.
+        const targetChannelObjects = new Map();
+
+        // ------------------------------------------------------------------
+        // Rehydrate the source→target id maps saved by the previous attempt.
+        // Without this, permission overwrites, webhooks and messages could not
+        // resolve channels that were already created before the interruption.
+        // ------------------------------------------------------------------
+        if (resume?.maps) {
+            for (const [src, tgt] of Object.entries(resume.maps.roles || {})) manifest.roleMap.set(src, tgt);
+            for (const [src, tgt] of Object.entries(resume.maps.categories || {})) manifest.categoryMap.set(src, tgt);
+            for (const [src, tgt] of Object.entries(resume.maps.channels || {})) {
+                manifest.channelMap.set(src, tgt);
+                const existing = targetGuild.channels.cache.get(tgt);
+                if (existing) targetChannelObjects.set(src, existing);
+            }
+
+            const restored = Object.keys(resume.maps.channels || {}).length;
+            if (restored > 0) {
+                emitLog('info', `Restored ${restored} channel mapping(s) from checkpoint.`, 'RESUME_MAPS', 'reading_source');
+            }
+        }
+
         // ======================================================================
         // 5. OPTIONAL CLEANUP STAGE
         // ======================================================================
         let cleanupReport = { status: 'SKIPPED' };
-        if (options.cleanTarget) {
+        if (options.cleanTarget && !isResuming && !stageDone('cleaning_target')) {
             checkCancellation();
-            onStage('cleaning_target', 'Cleaning Target Server Structure', 24);
+            await beginStage('cleaning_target', 'Cleaning Target Server Structure', 24);
 
             const cleanupPlan = createCleanupPlan(targetGuild, options.cleanupMode || 'full', options);
             emitLog('info', `Target cleanup starting (${cleanupPlan.summary.channelsToDeleteCount} channels, ${cleanupPlan.summary.rolesToDeleteCount} roles)...`, null, 'cleaning_target');
@@ -166,9 +249,9 @@ export async function executeClone({
         // ======================================================================
         // 6. CLONING SERVER PROFILE / BRANDING
         // ======================================================================
-        if (options.cloneProfile) {
+        if (options.cloneProfile && !stageDone('cloning_profile')) {
             checkCancellation();
-            onStage('cloning_profile', 'Cloning Server Branding & Profile', 34);
+            await beginStage('cloning_profile', 'Cloning Server Branding & Profile', 34);
             emitLog('info', 'Synchronizing server title, icon, and banner assets...', null, 'cloning_profile');
 
             if (targetGuild.name !== sourceGuild.name) {
@@ -237,9 +320,9 @@ export async function executeClone({
         // ======================================================================
         // 6a. CLONING EMOJIS
         // ======================================================================
-        if (options.cloneEmojis) {
+        if (options.cloneEmojis && !stageDone('cloning_emojis')) {
             checkCancellation();
-            onStage('cloning_emojis', 'Cloning Emojis', 35);
+            await beginStage('cloning_emojis', 'Cloning Emojis', 35);
             emitLog('info', 'Cloning custom emojis...', null, 'cloning_emojis');
 
             try {
@@ -277,9 +360,9 @@ export async function executeClone({
         // ======================================================================
         // 6b. CLONING STICKERS
         // ======================================================================
-        if (options.cloneStickers) {
+        if (options.cloneStickers && !stageDone('cloning_stickers')) {
             checkCancellation();
-            onStage('cloning_stickers', 'Cloning Stickers', 38);
+            await beginStage('cloning_stickers', 'Cloning Stickers', 38);
             emitLog('info', 'Cloning custom stickers...', null, 'cloning_stickers');
 
             try {
@@ -319,9 +402,9 @@ export async function executeClone({
         // ======================================================================
         // 7. CLONING ROLES
         // ======================================================================
-        if (options.cloneRoles) {
+        if (options.cloneRoles && !stageDone('cloning_roles')) {
             checkCancellation();
-            onStage('cloning_roles', 'Cloning Roles & Hierarchy', 42);
+            await beginStage('cloning_roles', 'Cloning Roles & Hierarchy', 42);
             emitLog('info', 'Cloning custom roles, colors, and permissions...', null, 'cloning_roles');
 
             const sourceRoles = Array.from(sourceGuild.roles.cache.values())
@@ -334,6 +417,7 @@ export async function executeClone({
 
             for (const role of sourceRoles) {
                 checkCancellation();
+                await pauseGate();
                 roleIdx++;
                 const currentPct = 42 + Math.round((roleIdx / Math.max(1, totalRoles)) * 16);
                 onProgress(currentPct, roleIdx, totalRoles, `@${role.name}`);
@@ -403,9 +487,9 @@ export async function executeClone({
         // ======================================================================
         // 8. CLONING CATEGORIES
         // ======================================================================
-        if (options.cloneChannels) {
+        if (options.cloneChannels && !stageDone('cloning_categories')) {
             checkCancellation();
-            onStage('cloning_categories', 'Building Category Containers', 60);
+            await beginStage('cloning_categories', 'Building Category Containers', 60);
             emitLog('info', 'Building category containers and structure...', null, 'cloning_categories');
 
             const sourceCategories = Array.from(sourceGuild.channels.cache.values())
@@ -418,6 +502,7 @@ export async function executeClone({
 
             for (const cat of sourceCategories) {
                 checkCancellation();
+                await pauseGate();
                 catIdx++;
                 const currentPct = 60 + Math.round((catIdx / Math.max(1, totalCats)) * 8);
                 onProgress(currentPct, catIdx, totalCats, `📁 ${cat.name}`);
@@ -458,10 +543,9 @@ export async function executeClone({
         // ======================================================================
         // 9. CLONING CHANNELS
         // ======================================================================
-        const targetChannelObjects = new Map(); // sourceId -> targetChannel Discord object
-        if (options.cloneChannels) {
+        if (options.cloneChannels && !stageDone('cloning_channels')) {
             checkCancellation();
-            onStage('cloning_channels', 'Building Channels & Structure', 68);
+            await beginStage('cloning_channels', 'Building Channels & Structure', 68);
             emitLog('info', 'Creating text, voice, and announcement channels...', null, 'cloning_channels');
 
             const sourceChannels = Array.from(sourceGuild.channels.cache.values())
@@ -474,6 +558,7 @@ export async function executeClone({
 
             for (const ch of sourceChannels) {
                 checkCancellation();
+                await pauseGate();
                 chIdx++;
                 const currentPct = 68 + Math.round((chIdx / Math.max(1, totalChans)) * 14);
                 onProgress(currentPct, chIdx, totalChans, `#${ch.name}`);
@@ -550,9 +635,9 @@ export async function executeClone({
         // ======================================================================
         // 10. APPLYING PERMISSION OVERWRITES
         // ======================================================================
-        if (options.clonePermissions && (options.cloneRoles || options.cloneChannels)) {
+        if (options.clonePermissions && (options.cloneRoles || options.cloneChannels) && !stageDone('applying_permissions')) {
             checkCancellation();
-            onStage('applying_permissions', 'Applying Permission Overwrites', 82);
+            await beginStage('applying_permissions', 'Applying Permission Overwrites', 82);
             emitLog('info', 'Configuring channel privacy & role overwrites...', null, 'applying_permissions');
 
             for (const [sourceChId, targetCh] of targetChannelObjects.entries()) {
@@ -611,9 +696,9 @@ export async function executeClone({
         // ======================================================================
         // 11. CLONING WEBHOOKS
         // ======================================================================
-        if (options.cloneWebhooks && options.cloneChannels && targetChannelObjects.size > 0) {
+        if (options.cloneWebhooks && options.cloneChannels && targetChannelObjects.size > 0 && !stageDone('cloning_webhooks')) {
             checkCancellation();
-            onStage('cloning_webhooks', 'Cloning Webhooks', 84);
+            await beginStage('cloning_webhooks', 'Cloning Webhooks', 84);
             emitLog('info', 'Cloning source webhooks to target channels...', null, 'cloning_webhooks');
 
             const textChannels = Array.from(targetChannelObjects.entries()).filter(([srcId, tgtCh]) => {
@@ -669,12 +754,12 @@ export async function executeClone({
         // ======================================================================
         // 12. CLONING MESSAGES (OPTIONAL)
         // =====================================================================
-        if (options.cloneMessages && options.cloneChannels && targetChannelObjects.size > 0) {
+        if (options.cloneMessages && options.cloneChannels && targetChannelObjects.size > 0 && !stageDone('cloning_messages')) {
             checkCancellation();
             const limit = options.msgLimit || 15;
             const delay = options.msgDelay || 1000;
 
-            onStage('cloning_messages', `Cloning Message History (Up to ${limit}/channel)`, 88);
+            await beginStage('cloning_messages', `Cloning Message History (Up to ${limit}/channel)`, 88);
             emitLog('info', `Syncing chat logs via webhooks (${limit} msgs/channel, ${delay}ms pacing)...`, null, 'cloning_messages');
 
             const textChannelsToSync = Array.from(targetChannelObjects.entries()).filter(([srcId, tgtCh]) => {
@@ -687,7 +772,13 @@ export async function executeClone({
 
             for (const [srcId, targetChannel] of textChannelsToSync) {
                 checkCancellation();
+                await pauseGate();
                 syncedChannelsCount++;
+
+                // Resume cursors are per channel: everything at or below the
+                // cursor was already delivered in a previous attempt.
+                const cursorId = resume?.cursors?.lastMessageIds?.[srcId] || null;
+                let lastProcessedId = null;
                 const sourceChannel = sourceGuild.channels.cache.get(srcId);
                 onProgress(
                     88 + Math.round((syncedChannelsCount / Math.max(1, totalTextChannels)) * 6),
@@ -714,6 +805,26 @@ export async function executeClone({
                     } catch (fetchErr) {
                         emitLog('warning', `Could not fetch messages from #${sourceChannel.name}`, fetchErr.message, 'cloning_messages');
                         continue;
+                    }
+
+                    if (messages && cursorId && messages.size > 0) {
+                        const fresh = new Map();
+                        let reachedCursor = false;
+                        for (const [id, msg] of messages) {
+                            try {
+                                if (BigInt(id) <= BigInt(cursorId)) {
+                                    reachedCursor = true;
+                                    break;
+                                }
+                            } catch {
+                                // Non-numeric ids should never happen; keep the message.
+                            }
+                            fresh.set(id, msg);
+                        }
+                        if (reachedCursor && fresh.size === 0) {
+                            emitLog('info', `#${sourceChannel.name}: already up to date (resume cursor).`, 'RESUME_CURSOR', 'cloning_messages');
+                        }
+                        messages = fresh;
                     }
 
                     if (messages && messages.size > 0) {
@@ -787,6 +898,7 @@ export async function executeClone({
                                         });
 
                                         manifest.messageMap.set(msg.id, true);
+                                        lastProcessedId = msg.id;
                                         manifest.messages.copied++;
                                         manifest.attachments.copied += files.length;
                                         await cancellableSleep(delay, isCancelled);
@@ -823,6 +935,10 @@ export async function executeClone({
                 } catch (chMsgErr) {
                     emitLog('warning', `Could not sync messages in #${sourceChannel.name}`, chMsgErr.message, 'cloning_messages');
                 }
+
+                if (lastProcessedId) {
+                    onCheckpoint({ cursors: { lastMessageIds: { [srcId]: lastProcessedId } } });
+                }
             }
             emitLog('success', `Message migration finished (${manifest.messages.copied} messages copied).`, null, 'cloning_messages');
         }
@@ -831,7 +947,7 @@ export async function executeClone({
         // 12. VERIFICATION ENGINE
         // ======================================================================
         checkCancellation();
-        onStage('verifying', 'Verifying Target Server State', 95);
+        await beginStage('verifying', 'Verifying Target Server State', 95);
         emitLog('info', 'Performing post-migration audit and comparing expected hierarchy...', null, 'verifying');
 
         const verification = await verifyTargetGuildMigration({
@@ -850,7 +966,8 @@ export async function executeClone({
         // ======================================================================
         // 13. COMPLETED & REPORT
         // ======================================================================
-        onStage('completed', 'Migration Completed', 100);
+        checkpoint('verifying');
+        await beginStage('completed', 'Migration Completed', 100);
         onProgress(100, 1, 1, 'Completed');
 
         const finalReport = manifest.finalize();
