@@ -1,6 +1,6 @@
 {
   "name": "DISCLONER",
-  "description": "Premium Discord server migration and synchronization studio featuring a clean neumorphic design, real-time stage telemetry, and robust guild cloning.",
+  "description": "Discloner Studio \u2014 precision Discord server migration, continuous mirroring and resumable jobs",
   "requestFramePermissions": [],
-  "version": "2.3.0"
+  "version": "3.0.0"
 }

@@ -3,22 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>DISCLONER | Server Clone & Migration Studio</title>
+    <meta name="description" content="Discloner Studio — high-fidelity Discord server migration, continuous mirroring and resumable jobs.">
+    <meta name="color-scheme" content="light dark">
+    <title>DISCLONER STUDIO | Server Clone &amp; Migration</title>
+
     <!-- Theme bootstrap (external so a strict CSP can be enforced) -->
     <script src="theme-bootstrap.js"></script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles/tokens.css">
+    <link rel="stylesheet" href="styles/base.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/panels.css">
+    <link rel="stylesheet" href="styles/console.css">
+    <link rel="stylesheet" href="styles/modals.css">
+    <link rel="stylesheet" href="styles/responsive.css">
 </head>
 <body>
     <a class="skip-link" href="#mainDashboard">Skip to migration setup</a>
-    <div class="app-wrapper" id="appRoot">
-        
-        <!-- Header -->
+
+    <div class="app-wrapper app-shell" id="appRoot">
+
+        <!-- ============================= HEADER ============================= -->
         <header class="app-header" id="mainHeader">
             <div class="header-inner">
-                <!-- Brand -->
                 <div class="header-brand">
                     <div class="brand-icon-raised" aria-hidden="true">
                         <svg class="brand-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -32,41 +42,33 @@
                             <span class="brand-title">DISCLONER</span>
                             <span class="badge-tag">STUDIO</span>
                         </div>
-                        <span class="brand-subtitle">SERVER CLONE & MIGRATION</span>
+                        <span class="brand-subtitle">SERVER CLONE &amp; MIGRATION</span>
                     </div>
                 </div>
 
-                <!-- Desktop Navigation Links -->
-                <nav class="desktop-nav" aria-label="Main Navigation">
+                <nav class="desktop-nav" aria-label="Main navigation">
                     <a href="#appRoot" class="nav-link active" id="navHome">Home</a>
-                    <button type="button" class="nav-link-btn" id="navTourBtn" title="Start Guided Tour">Tour</button>
+                    <button type="button" class="nav-link-btn" id="navTourBtn" title="Start guided tour">Tour</button>
                     <button type="button" class="nav-link-btn" id="navTemplatesBtn">Presets</button>
                     <button type="button" class="nav-link-btn" id="navGuidesBtn">Guides</button>
                     <button type="button" class="nav-link-btn" id="navSupportBtn">About</button>
                 </nav>
 
-                <!-- Header Actions: Status & Merged Theme Toggle -->
                 <div class="header-actions">
-                    <!-- Connection Status Pill -->
-                    <div class="conn-status-pill" id="connStatus" title="Socket.IO Gateway Status">
+                    <div class="conn-status-pill" id="connStatus" title="Realtime gateway status">
                         <span class="status-dot"></span>
-                        <span class="status-label" id="connStatusText">Connected</span>
+                        <span class="status-label" id="connStatusText">Connecting…</span>
                     </div>
 
-                    <!-- Seamless Integrated Theme Toggle Switch -->
-                    <button type="button" class="theme-toggle-merged" id="themeToggleBtn" role="switch" aria-checked="false" aria-label="Toggle light and dark theme" title="Toggle Light / Dark Mode">
+                    <button type="button" class="theme-toggle-merged" id="themeToggleBtn" role="switch" aria-checked="false" aria-label="Toggle light and dark theme" title="Toggle light / dark mode">
                         <span class="theme-toggle-indicator" id="themeIndicator" aria-hidden="true"></span>
                         <span class="theme-toggle-option theme-option-light" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="12" r="5"/>
-                                <line x1="12" y1="1" x2="12" y2="3"/>
-                                <line x1="12" y1="21" x2="12" y2="23"/>
-                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                                <line x1="1" y1="12" x2="3" y2="12"/>
-                                <line x1="21" y1="12" x2="23" y2="12"/>
-                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                                <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                                <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                             </svg>
                         </span>
                         <span class="theme-toggle-option theme-option-dark" aria-hidden="true">
@@ -79,362 +81,396 @@
             </div>
         </header>
 
-        <!-- Hero Section -->
-        <section class="hero-section">
-            <div class="hero-content">
-                <div class="hero-badge">
-                    <span class="hero-badge-dot"></span>
-                    <span>HIGH-FIDELITY GUILD SYNCHRONIZATION</span>
-                </div>
-                <h1 class="hero-title">
-                    Clone Your Server.<br>
-                    <span class="hero-accent">Precisely.</span>
-                </h1>
-                <p class="hero-subtitle">
-                    Replicate Discord channels, roles, permission bitfields, and assets with real-time telemetry.
-                </p>
+        <main id="mainDashboard" tabindex="-1" class="main-shell">
 
-                <!-- Clean Workflow Stepper -->
-                <div class="workflow-stepper" aria-label="Migration Workflow">
-                    <div class="step-chip" id="stepToken" data-step="1">
-                        <span class="step-chip-num">1</span>
-                        <span class="step-chip-text">Token</span>
+            <!-- ============================= HERO ============================= -->
+            <section class="hero-section" aria-labelledby="heroTitle">
+                <div class="hero-content">
+                    <div class="hero-badge">
+                        <span class="hero-badge-dot"></span>
+                        <span>HIGH-FIDELITY GUILD SYNCHRONISATION</span>
                     </div>
-                    <span class="step-divider" aria-hidden="true">→</span>
-                    <div class="step-chip" id="stepRoute" data-step="2">
-                        <span class="step-chip-num">2</span>
-                        <span class="step-chip-text">Source & Target</span>
-                    </div>
-                    <span class="step-divider" aria-hidden="true">→</span>
-                    <div class="step-chip" id="stepClone" data-step="3">
-                        <span class="step-chip-num">3</span>
-                        <span class="step-chip-text">Clone</span>
-                    </div>
-                </div>
-            </div>
-        </section>
+                    <h1 class="hero-title" id="heroTitle">
+                        Clone your server.<br>
+                        <span class="hero-accent">Precisely.</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        Replicate channels, roles, permissions and history with live telemetry — or keep it in sync continuously.
+                    </p>
 
-        <!-- Main Dashboard Workspace -->
-        <main class="dashboard-grid" id="mainDashboard" tabindex="-1">
-            
-            <!-- Left Column: Streamlined Migration Card with Advanced Settings Drawer -->
-            <section class="workspace-col config-column" aria-label="Migration Setup">
-                <form id="clonerForm" autocomplete="off">
-                    
-                    <!-- Unified Clean Setup Card -->
-                    <div class="neu-card" id="migrationSetupCard">
-                        <div class="neu-card-header">
-                            <div class="card-icon-bubble">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                                </svg>
-                            </div>
-                            <div class="card-header-titles">
-                                <h2 class="card-title">Server Migration Setup</h2>
-                                <p class="card-desc">Enter authorization token and source/target server IDs</p>
-                            </div>
+                    <div class="workflow-stepper" aria-label="Migration workflow">
+                        <div class="step-chip" id="stepToken" data-step="1">
+                            <span class="step-chip-num">1</span>
+                            <span class="step-chip-text">Token</span>
                         </div>
+                        <span class="step-divider" aria-hidden="true">→</span>
+                        <div class="step-chip" id="stepRoute" data-step="2">
+                            <span class="step-chip-num">2</span>
+                            <span class="step-chip-text">Source &amp; Target</span>
+                        </div>
+                        <span class="step-divider" aria-hidden="true">→</span>
+                        <div class="step-chip" id="stepClone" data-step="3">
+                            <span class="step-chip-num">3</span>
+                            <span class="step-chip-text">Clone</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-                        <div class="neu-card-body">
-                            <!-- 1. Token Input -->
-                            <div class="form-group">
-                                <label for="userToken" class="field-label">
-                                    <span>Discord User Token</span>
-                                    <span class="required-mark" aria-hidden="true">*</span>
-                                </label>
-                                <div class="neu-input-wrapper">
-                                    <input 
-                                        type="password" 
-                                        id="userToken" 
-                                        name="userToken"
-                                        placeholder="Paste Discord user token" 
-                                        required 
-                                        autocomplete="new-password"
-                                        spellcheck="false"
-                                        autocapitalize="off"
-                                        autocorrect="off"
-                                        aria-describedby="tokenHelper"
-                                        class="neu-input font-mono"
-                                    >
-                                    <div class="input-actions">
-                                        <button type="button" class="neu-icon-btn" id="toggleTokenVisibility" aria-label="Toggle token visibility" title="Show/Hide Token">
-                                            <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                                <circle cx="12" cy="12" r="3"/>
-                                            </svg>
-                                        </button>
-                                        <button type="button" class="neu-icon-btn" id="clearTokenBtn" aria-label="Clear token input" title="Clear Token">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                                <line x1="6" y1="6" x2="18" y2="18"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="field-helper security-badge" id="tokenHelper">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="helper-icon" aria-hidden="true">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <!-- =========================== WORKSPACE ========================== -->
+            <div class="workspace">
+
+                <!-- ------------------------- SETUP COLUMN ------------------------ -->
+                <section class="col col--setup" aria-label="Migration setup">
+                    <form id="clonerForm" autocomplete="off" novalidate>
+
+                        <div class="neu-card panel panel--setup" id="migrationSetupCard">
+                            <header class="panel-head">
+                                <div class="card-icon-bubble" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                                     </svg>
-                                    <span>Token stays in memory only. It is never written to browser storage unless you opt in below.</span>
                                 </div>
-                                <label class="neu-option-row token-remember-row" for="rememberToken">
-                                    <div class="option-text-group">
-                                        <div class="option-title-row">
-                                            <span class="option-title">Remember token on this device</span>
-                                            <span class="badge-opt-status" id="rememberTokenBadge">Off</span>
+                                <div class="card-header-titles">
+                                    <h2 class="card-title">Migration setup</h2>
+                                    <p class="card-desc">Authorise, choose direction, then start.</p>
+                                </div>
+                                <span class="panel-head-note" id="modeNote">One-shot</span>
+                            </header>
+
+                            <div class="neu-card-body panel-body">
+
+                                <!-- Mode selector -->
+                                <fieldset class="mode-switch" id="modeSwitch" aria-describedby="modeHelp">
+                                    <legend class="sr-only">Migration mode</legend>
+                                    <label class="mode-option is-active" data-mode-option="clone">
+                                        <input type="radio" name="jobMode" value="clone" checked>
+                                        <span class="mode-option-body">
+                                            <span class="mode-option-icon" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M4 7h11a3 3 0 0 1 3 3v7"/>
+                                                    <polyline points="15 14 18 17 21 14"/>
+                                                    <circle cx="4" cy="7" r="2"/>
+                                                </svg>
+                                            </span>
+                                            <span class="mode-option-text">
+                                                <span class="mode-option-title">One-shot clone</span>
+                                                <span class="mode-option-desc">Copy structure once, then finish.</span>
+                                            </span>
+                                        </span>
+                                    </label>
+                                    <label class="mode-option" data-mode-option="mirror" id="mirrorModeOption">
+                                        <input type="radio" name="jobMode" value="mirror">
+                                        <span class="mode-option-body">
+                                            <span class="mode-option-icon" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/>
+                                                </svg>
+                                            </span>
+                                            <span class="mode-option-text">
+                                                <span class="mode-option-title">Continuous mirror</span>
+                                                <span class="mode-option-desc">Keep forwarding new activity live.</span>
+                                            </span>
+                                        </span>
+                                    </label>
+                                </fieldset>
+                                <p class="field-hint" id="modeHelp">One-shot runs a complete copy and stops. Continuous mirror keeps a session open and forwards new messages and structure changes until you stop it.</p>
+
+                                <!-- Token -->
+                                <div class="form-group">
+                                    <label for="userToken" class="field-label">
+                                        <span>Discord user token</span>
+                                        <span class="required-mark" aria-hidden="true">*</span>
+                                    </label>
+                                    <div class="neu-input-wrapper">
+                                        <input
+                                            type="password"
+                                            id="userToken"
+                                            name="userToken"
+                                            placeholder="Paste Discord user token"
+                                            required
+                                            autocomplete="new-password"
+                                            spellcheck="false"
+                                            autocapitalize="off"
+                                            autocorrect="off"
+                                            aria-describedby="tokenHelper"
+                                            class="neu-input font-mono"
+                                        >
+                                        <div class="input-actions">
+                                            <button type="button" class="neu-icon-btn" id="toggleTokenVisibility" aria-label="Toggle token visibility" title="Show / hide token">
+                                                <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                                    <circle cx="12" cy="12" r="3"/>
+                                                </svg>
+                                            </button>
+                                            <button type="button" class="neu-icon-btn" id="clearTokenBtn" aria-label="Clear token input" title="Clear token">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                                </svg>
+                                            </button>
                                         </div>
-                                        <p class="option-desc">Stores the token unencrypted in this browser's localStorage. Only enable on a device you alone control.</p>
                                     </div>
-                                    <div class="neu-toggle">
-                                        <input type="checkbox" id="rememberToken" name="rememberToken">
-                                        <span class="neu-toggle-slider"></span>
+                                    <div class="validation-feedback" id="tokenFeedback" role="status"></div>
+                                    <div class="field-helper security-badge" id="tokenHelper">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="helper-icon" aria-hidden="true">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                        </svg>
+                                        <span>Token stays in memory only. It is never written to browser storage unless you opt in below.</span>
                                     </div>
-                                </label>
-                            </div>
-
-                            <!-- 2. Source → Target Server Routing -->
-                            <div class="routing-layout">
-                                <!-- Source Server Field -->
-                                <div class="form-group routing-field">
-                                    <label for="sourceId" class="field-label">
-                                        <span class="badge-role source-badge">SOURCE</span>
-                                        <span>Source Server ID</span>
-                                        <span class="required-mark" aria-hidden="true">*</span>
+                                    <label class="neu-option-row token-remember-row" for="rememberToken">
+                                        <div class="option-text-group">
+                                            <div class="option-title-row">
+                                                <span class="option-title">Remember token on this device</span>
+                                                <span class="badge-opt-status" id="rememberTokenBadge">Off</span>
+                                            </div>
+                                            <p class="option-desc">Stores the token unencrypted in this browser's localStorage. Only enable on a device you alone control.</p>
+                                        </div>
+                                        <div class="neu-toggle">
+                                            <input type="checkbox" id="rememberToken" name="rememberToken">
+                                            <span class="neu-toggle-slider"></span>
+                                        </div>
                                     </label>
-                                    <div class="neu-input-wrapper">
-                                        <input 
-                                            type="text" 
-                                            id="sourceId" 
-                                            name="sourceId"
-                                            placeholder="17-20 digit ID" 
-                                            required 
-                                            maxlength="22"
-                                            inputmode="numeric"
-                                            spellcheck="false"
-                                            autocapitalize="off"
-                                            autocorrect="off"
-                                            class="neu-input font-mono"
-                                        >
-                                    </div>
-                                    <div class="validation-feedback" id="sourceFeedback"></div>
                                 </div>
 
-                                <!-- Directional Bridge Arrow -->
-                                <div class="routing-arrow-wrapper" aria-hidden="true">
-                                    <div class="routing-arrow-badge">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="arrow-desktop">
-                                            <line x1="5" y1="12" x2="19" y2="12"/>
-                                            <polyline points="12 5 19 12 12 19"/>
-                                        </svg>
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="arrow-mobile">
-                                            <line x1="12" y1="5" x2="12" y2="19"/>
-                                            <polyline points="5 12 12 19 19 12"/>
-                                        </svg>
+                                <!-- Routing -->
+                                <div class="routing-layout">
+                                    <div class="form-group routing-field">
+                                        <label for="sourceId" class="field-label">
+                                            <span class="badge-role source-badge">SOURCE</span>
+                                            <span>Source server ID</span>
+                                            <span class="required-mark" aria-hidden="true">*</span>
+                                        </label>
+                                        <div class="neu-input-wrapper">
+                                            <input
+                                                type="text"
+                                                id="sourceId"
+                                                name="sourceId"
+                                                placeholder="17–20 digit ID"
+                                                required
+                                                maxlength="22"
+                                                inputmode="numeric"
+                                                spellcheck="false"
+                                                autocapitalize="off"
+                                                autocorrect="off"
+                                                aria-describedby="sourceFeedback"
+                                                class="neu-input font-mono"
+                                            >
+                                        </div>
+                                        <div class="validation-feedback" id="sourceFeedback" role="status"></div>
+                                    </div>
+
+                                    <div class="routing-arrow-wrapper" aria-hidden="true">
+                                        <div class="routing-arrow-badge">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="arrow-desktop">
+                                                <line x1="5" y1="12" x2="19" y2="12"/>
+                                                <polyline points="12 5 19 12 12 19"/>
+                                            </svg>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="arrow-mobile">
+                                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                                <polyline points="5 12 12 19 19 12"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group routing-field">
+                                        <label for="targetId" class="field-label">
+                                            <span class="badge-role target-badge">TARGET</span>
+                                            <span>Target server ID</span>
+                                            <span class="required-mark" aria-hidden="true">*</span>
+                                        </label>
+                                        <div class="neu-input-wrapper">
+                                            <input
+                                                type="text"
+                                                id="targetId"
+                                                name="targetId"
+                                                placeholder="17–20 digit ID"
+                                                required
+                                                maxlength="22"
+                                                inputmode="numeric"
+                                                spellcheck="false"
+                                                autocapitalize="off"
+                                                autocorrect="off"
+                                                aria-describedby="targetFeedback"
+                                                class="neu-input font-mono"
+                                            >
+                                        </div>
+                                        <div class="validation-feedback" id="targetFeedback" role="status"></div>
                                     </div>
                                 </div>
 
-                                <!-- Target Server Field -->
-                                <div class="form-group routing-field">
-                                    <label for="targetId" class="field-label">
-                                        <span class="badge-role target-badge">TARGET</span>
-                                        <span>Target Server ID</span>
-                                        <span class="required-mark" aria-hidden="true">*</span>
-                                    </label>
-                                    <div class="neu-input-wrapper">
-                                        <input 
-                                            type="text" 
-                                            id="targetId" 
-                                            name="targetId"
-                                            placeholder="17-20 digit ID" 
-                                            required 
-                                            maxlength="22"
-                                            inputmode="numeric"
-                                            spellcheck="false"
-                                            autocapitalize="off"
-                                            autocorrect="off"
-                                            class="neu-input font-mono"
-                                        >
-                                    </div>
-                                    <div class="validation-feedback" id="targetFeedback"></div>
-                                </div>
-                            </div>
+                                <!-- Advanced drawer -->
+                                <div class="advanced-section">
+                                    <button type="button" class="advanced-accordion-btn" id="advancedToggleBtn" aria-expanded="false" aria-controls="advancedPanel">
+                                        <span class="advanced-accordion-label">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="advanced-icon" aria-hidden="true">
+                                                <circle cx="12" cy="12" r="3"/>
+                                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.35.4.65.73.85H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                            </svg>
+                                            <span>Advanced configuration</span>
+                                        </span>
+                                        <span class="advanced-accordion-meta">
+                                            <span class="badge-opt-status" id="advancedSummary">Defaults</span>
+                                            <svg class="advanced-chevron" id="advancedChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                                <polyline points="6 9 12 15 18 9"/>
+                                            </svg>
+                                        </span>
+                                    </button>
 
-                            <!-- 3. Advanced Configuration Accordion (Houses all scope options & sliders) -->
-                            <div class="advanced-accordion-section">
-                                <button type="button" class="advanced-accordion-btn" id="advancedToggleBtn" aria-expanded="false" aria-controls="advancedPanel">
-                                    <div class="accordion-left">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="gear-icon">
-                                            <circle cx="12" cy="12" r="3"/>
-                                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                                        </svg>
-                                        <span class="accordion-title">Advanced Configuration</span>
-                                    </div>
-                                    <div class="accordion-right">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="chevron-icon" id="advancedChevron">
-                                            <polyline points="9 18 15 12 9 6"/>
-                                        </svg>
-                                    </div>
-                                </button>
-
-                                <!-- Collapsible Slidebar Panel (Closed by default) -->
-                                <div class="advanced-panel-content collapsed" id="advancedPanel">
-                                    <div class="advanced-panel-inner">
-                                        <div class="options-list">
-                                            <!-- Option 0: Clean Target Server (Default ON) -->
-                                            <label class="neu-option-row" for="cleanTarget">
-                                                <div class="option-text-group">
-                                                    <div class="option-title-row">
-                                                        <span class="option-title">Clean Target Server</span>
-                                                        <span class="badge-opt-status active">Default ON</span>
+                                    <div class="advanced-panel-content collapsed" id="advancedPanel">
+                                        <div class="advanced-panel-inner">
+                                            <div class="options-list">
+                                                <label class="neu-option-row" for="cleanTarget">
+                                                    <div class="option-text-group">
+                                                        <div class="option-title-row">
+                                                            <span class="option-title">Clean target server</span>
+                                                            <span class="badge-opt-status active" data-role="danger-badge">Destructive</span>
+                                                        </div>
+                                                        <p class="option-desc">Purge existing channels &amp; custom roles in the target before replication.</p>
                                                     </div>
-                                                    <p class="option-desc">Purge existing channels & custom roles in target before replication</p>
-                                                </div>
-                                                <div class="neu-toggle">
-                                                    <input type="checkbox" id="cleanTarget" name="cleanTarget" checked>
-                                                    <span class="neu-toggle-slider"></span>
-                                                </div>
-                                            </label>
-
-                                            <!-- Option 1: Roles -->
-                                            <label class="neu-option-row" for="cloneRoles">
-                                                <div class="option-text-group">
-                                                    <div class="option-title-row">
-                                                        <span class="option-title">Roles & Hierarchy</span>
-                                                        <span class="badge-opt-status active">Core</span>
+                                                    <div class="neu-toggle">
+                                                        <input type="checkbox" id="cleanTarget" name="cleanTarget" checked>
+                                                        <span class="neu-toggle-slider"></span>
                                                     </div>
-                                                    <p class="option-desc">Mirror roles, colors, hoist settings, and base permission bitfields</p>
-                                                </div>
-                                                <div class="neu-toggle">
-                                                    <input type="checkbox" id="cloneRoles" checked>
-                                                    <span class="neu-toggle-slider"></span>
-                                                </div>
-                                            </label>
+                                                </label>
 
-                                            <!-- Option 2: Channels -->
-                                            <label class="neu-option-row" for="cloneChannels">
-                                                <div class="option-text-group">
-                                                    <div class="option-title-row">
-                                                        <span class="option-title">Channels & Categories</span>
-                                                        <span class="badge-opt-status active">Core</span>
+                                                <label class="neu-option-row" for="cloneRoles">
+                                                    <div class="option-text-group">
+                                                        <div class="option-title-row">
+                                                            <span class="option-title">Roles &amp; hierarchy</span>
+                                                            <span class="badge-opt-status active">Core</span>
+                                                        </div>
+                                                        <p class="option-desc">Mirror roles, colours, hoist settings and permission bitfields.</p>
                                                     </div>
-                                                    <p class="option-desc">Mirror category trees, text, voice, announcement channels, and topics</p>
-                                                </div>
-                                                <div class="neu-toggle">
-                                                    <input type="checkbox" id="cloneChannels" checked>
-                                                    <span class="neu-toggle-slider"></span>
-                                                </div>
-                                            </label>
-
-                                            <!-- Option 3: Permissions -->
-                                            <label class="neu-option-row" for="clonePermissions">
-                                                <div class="option-text-group">
-                                                    <div class="option-title-row">
-                                                        <span class="option-title">Permissions & Overwrites</span>
+                                                    <div class="neu-toggle">
+                                                        <input type="checkbox" id="cloneRoles" name="cloneRoles" checked>
+                                                        <span class="neu-toggle-slider"></span>
                                                     </div>
-                                                    <p class="option-desc">Preserve role-specific channel privacy, hidden categories, and overrides</p>
-                                                </div>
-                                                <div class="neu-toggle">
-                                                    <input type="checkbox" id="clonePermissions" checked>
-                                                    <span class="neu-toggle-slider"></span>
-                                                </div>
-                                            </label>
+                                                </label>
 
-                                            <!-- Option 4: Server Profile -->
-                                            <label class="neu-option-row" for="cloneProfile">
-                                                <div class="option-text-group">
-                                                    <div class="option-title-row">
-                                                        <span class="option-title">Server Profile & Assets</span>
+                                                <label class="neu-option-row" for="cloneChannels">
+                                                    <div class="option-text-group">
+                                                        <div class="option-title-row">
+                                                            <span class="option-title">Channels &amp; categories</span>
+                                                            <span class="badge-opt-status active">Core</span>
+                                                        </div>
+                                                        <p class="option-desc">Rebuild categories, text, voice and announcement channels.</p>
                                                     </div>
-                                                    <p class="option-desc">Synchronize server title name, 4096px icon avatar, and server banner</p>
-                                                </div>
-                                                <div class="neu-toggle">
-                                                    <input type="checkbox" id="cloneProfile" checked>
-                                                    <span class="neu-toggle-slider"></span>
-                                                </div>
-                                            </label>
-
-                                            <!-- Option 4b: Emojis -->
-                                            <label class="neu-option-row" for="cloneEmojis">
-                                                <div class="option-text-group">
-                                                    <div class="option-title-row">
-                                                        <span class="option-title">Emojis</span>
+                                                    <div class="neu-toggle">
+                                                        <input type="checkbox" id="cloneChannels" name="cloneChannels" checked>
+                                                        <span class="neu-toggle-slider"></span>
                                                     </div>
-                                                    <p class="option-desc">Clone all custom emojis from the source server</p>
-                                                </div>
-                                                <div class="neu-toggle">
-                                                    <input type="checkbox" id="cloneEmojis" checked>
-                                                    <span class="neu-toggle-slider"></span>
-                                                </div>
-                                            </label>
+                                                </label>
 
-                                            <!-- Option 4c: Stickers -->
-                                            <label class="neu-option-row" for="cloneStickers">
-                                                <div class="option-text-group">
-                                                    <div class="option-title-row">
-                                                        <span class="option-title">Stickers</span>
+                                                <label class="neu-option-row" for="clonePermissions">
+                                                    <div class="option-text-group">
+                                                        <div class="option-title-row">
+                                                            <span class="option-title">Permission overwrites</span>
+                                                            <span class="badge-opt-status active">Core</span>
+                                                        </div>
+                                                        <p class="option-desc">Re-map role IDs and reapply channel-level privacy rules.</p>
                                                     </div>
-                                                    <p class="option-desc">Clone all custom stickers from the source server</p>
-                                                </div>
-                                                <div class="neu-toggle">
-                                                    <input type="checkbox" id="cloneStickers" checked>
-                                                    <span class="neu-toggle-slider"></span>
-                                                </div>
-                                            </label>
-
-                                            <!-- Option 4d: Webhooks -->
-                                            <label class="neu-option-row" for="cloneWebhooks">
-                                                <div class="option-text-group">
-                                                    <div class="option-title-row">
-                                                        <span class="option-title">Webhooks</span>
+                                                    <div class="neu-toggle">
+                                                        <input type="checkbox" id="clonePermissions" name="clonePermissions" checked>
+                                                        <span class="neu-toggle-slider"></span>
                                                     </div>
-                                                    <p class="option-desc">Clone channel webhooks (names and avatars)</p>
-                                                </div>
-                                                <div class="neu-toggle">
-                                                    <input type="checkbox" id="cloneWebhooks" checked>
-                                                    <span class="neu-toggle-slider"></span>
-                                                </div>
-                                            </label>
+                                                </label>
 
-                                            <!-- Option 5: Message History (Default OFF) -->
-                                            <label class="neu-option-row highlight-row" for="cloneMessages">
-                                                <div class="option-text-group">
-                                                    <div class="option-title-row">
-                                                        <span class="option-title">Message History (Webhooks)</span>
-                                                        <span class="badge-opt-status" id="msgOptStatusBadge">Optional</span>
+                                                <label class="neu-option-row" for="cloneProfile">
+                                                    <div class="option-text-group">
+                                                        <div class="option-title-row">
+                                                            <span class="option-title">Server profile</span>
+                                                            <span class="badge-opt-status active">Branding</span>
+                                                        </div>
+                                                        <p class="option-desc">Copy name, icon and banner.</p>
                                                     </div>
-                                                    <p class="option-desc">Clone recent chat logs from source channels using webhooks with author profiles</p>
-                                                </div>
-                                                <div class="neu-toggle">
-                                                    <input type="checkbox" id="cloneMessages">
-                                                    <span class="neu-toggle-slider"></span>
-                                                </div>
-                                            </label>
-
-                                            <!-- Option 6: Attachments -->
-                                            <label class="neu-option-row disabled-option" for="cloneAttachments" id="attachmentsRow">
-                                                <div class="option-text-group">
-                                                    <div class="option-title-row">
-                                                        <span class="option-title">Message Attachments</span>
-                                                        <span class="badge-opt-status disabled" id="attachmentsBadge">Disabled</span>
+                                                    <div class="neu-toggle">
+                                                        <input type="checkbox" id="cloneProfile" name="cloneProfile" checked>
+                                                        <span class="neu-toggle-slider"></span>
                                                     </div>
-                                                    <p class="option-desc" id="attachmentsDesc">Available when Message History is enabled</p>
-                                                </div>
-                                                <div class="neu-toggle">
-                                                    <input type="checkbox" id="cloneAttachments" disabled>
-                                                    <span class="neu-toggle-slider"></span>
-                                                </div>
-                                            </label>
+                                                </label>
 
-                                            <!-- Message Tuning Sub-Drawer -->
+                                                <label class="neu-option-row" for="cloneEmojis">
+                                                    <div class="option-text-group">
+                                                        <div class="option-title-row">
+                                                            <span class="option-title">Emojis</span>
+                                                            <span class="badge-opt-status">Optional</span>
+                                                        </div>
+                                                        <p class="option-desc">Re-upload custom emojis.</p>
+                                                    </div>
+                                                    <div class="neu-toggle">
+                                                        <input type="checkbox" id="cloneEmojis" name="cloneEmojis" checked>
+                                                        <span class="neu-toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="neu-option-row" for="cloneStickers">
+                                                    <div class="option-text-group">
+                                                        <div class="option-title-row">
+                                                            <span class="option-title">Stickers</span>
+                                                            <span class="badge-opt-status">Optional</span>
+                                                        </div>
+                                                        <p class="option-desc">Re-upload custom stickers.</p>
+                                                    </div>
+                                                    <div class="neu-toggle">
+                                                        <input type="checkbox" id="cloneStickers" name="cloneStickers" checked>
+                                                        <span class="neu-toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="neu-option-row" for="cloneWebhooks">
+                                                    <div class="option-text-group">
+                                                        <div class="option-title-row">
+                                                            <span class="option-title">Channel webhooks</span>
+                                                            <span class="badge-opt-status">Optional</span>
+                                                        </div>
+                                                        <p class="option-desc">Clone webhook names and avatars.</p>
+                                                    </div>
+                                                    <div class="neu-toggle">
+                                                        <input type="checkbox" id="cloneWebhooks" name="cloneWebhooks" checked>
+                                                        <span class="neu-toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="neu-option-row highlight-row" for="cloneMessages">
+                                                    <div class="option-text-group">
+                                                        <div class="option-title-row">
+                                                            <span class="option-title">Message history</span>
+                                                            <span class="badge-opt-status" id="msgOptStatusBadge">Optional</span>
+                                                        </div>
+                                                        <p class="option-desc">Replay recent chat via webhooks with matching author profiles.</p>
+                                                    </div>
+                                                    <div class="neu-toggle">
+                                                        <input type="checkbox" id="cloneMessages" name="cloneMessages">
+                                                        <span class="neu-toggle-slider"></span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="neu-option-row disabled-option" for="cloneAttachments" id="attachmentsRow">
+                                                    <div class="option-text-group">
+                                                        <div class="option-title-row">
+                                                            <span class="option-title">Message attachments</span>
+                                                            <span class="badge-opt-status disabled" id="attachmentsBadge">Disabled</span>
+                                                        </div>
+                                                        <p class="option-desc" id="attachmentsDesc">Available when message history is enabled.</p>
+                                                    </div>
+                                                    <div class="neu-toggle">
+                                                        <input type="checkbox" id="cloneAttachments" name="cloneAttachments" disabled>
+                                                        <span class="neu-toggle-slider"></span>
+                                                    </div>
+                                                </label>
+                                            </div>
+
+                                            <!-- Message tuning -->
                                             <div class="message-settings-drawer collapsed" id="messageSettingsDrawer">
                                                 <div class="drawer-inner-card">
                                                     <div class="drawer-header">
                                                         <div class="drawer-title-group">
-                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="drawer-icon">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="drawer-icon" aria-hidden="true">
                                                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                                                             </svg>
-                                                            <span class="drawer-title">Message Tuning</span>
+                                                            <span class="drawer-title">Message tuning</span>
                                                         </div>
                                                         <span class="badge-tag">ACTIVE</span>
                                                     </div>
@@ -442,50 +478,109 @@
                                                     <div class="drawer-body-grid">
                                                         <div class="form-group">
                                                             <div class="range-header">
-                                                                <label for="msgLimit" class="range-label">Messages Per Channel</label>
-                                                                <span class="range-val-badge" id="limitBadge">1000</span>
+                                                                <label for="msgLimit" class="range-label">Messages per channel</label>
+                                                                <span class="range-val-badge" id="limitBadge">15</span>
                                                             </div>
                                                             <div class="neu-range-wrapper">
-                                                                <input type="range" id="msgLimit" min="1" max="1000" value="1000" class="neu-range-slider">
+                                                                <input type="range" id="msgLimit" name="msgLimit" min="1" max="1000" value="15" class="neu-range-slider">
                                                             </div>
                                                         </div>
 
                                                         <div class="form-group">
                                                             <div class="range-header">
-                                                                <label for="msgDelay" class="range-label">Webhook Migration Pacing</label>
-                                                                <span class="range-val-badge" id="delayBadge">0ms</span>
+                                                                <label for="msgDelay" class="range-label">Webhook pacing</label>
+                                                                <span class="range-val-badge" id="delayBadge">1000ms</span>
                                                             </div>
                                                             <div class="neu-range-wrapper">
-                                                                <input type="range" id="msgDelay" min="0" max="5000" step="50" value="0" class="neu-range-slider">
+                                                                <input type="range" id="msgDelay" name="msgDelay" min="0" max="5000" step="50" value="1000" class="neu-range-slider">
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <!-- Configuration Action Toolbar (Save / Reset preferences) -->
+
+                                            <!-- Mirror tuning (hidden unless mirror mode) -->
+                                            <div class="mirror-options hidden" id="mirrorOptions">
+                                                <div class="drawer-inner-card">
+                                                    <div class="drawer-header">
+                                                        <div class="drawer-title-group">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="drawer-icon" aria-hidden="true">
+                                                                <path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/>
+                                                            </svg>
+                                                            <span class="drawer-title">Mirror scope</span>
+                                                        </div>
+                                                        <span class="badge-tag">LIVE</span>
+                                                    </div>
+
+                                                    <div class="options-list compact">
+                                                        <label class="neu-option-row" for="mirrorMessages">
+                                                            <div class="option-text-group">
+                                                                <span class="option-title">New messages</span>
+                                                                <p class="option-desc">Forward new source messages to the target.</p>
+                                                            </div>
+                                                            <div class="neu-toggle">
+                                                                <input type="checkbox" id="mirrorMessages" checked>
+                                                                <span class="neu-toggle-slider"></span>
+                                                            </div>
+                                                        </label>
+                                                        <label class="neu-option-row" for="mirrorEdits">
+                                                            <div class="option-text-group">
+                                                                <span class="option-title">Edits</span>
+                                                                <p class="option-desc">Forward edited messages as a new webhook post.</p>
+                                                            </div>
+                                                            <div class="neu-toggle">
+                                                                <input type="checkbox" id="mirrorEdits">
+                                                                <span class="neu-toggle-slider"></span>
+                                                            </div>
+                                                        </label>
+                                                        <label class="neu-option-row" for="mirrorDeletes">
+                                                            <div class="option-text-group">
+                                                                <span class="option-title">Deletions</span>
+                                                                <p class="option-desc">Log deletions in the activity console.</p>
+                                                            </div>
+                                                            <div class="neu-toggle">
+                                                                <input type="checkbox" id="mirrorDeletes">
+                                                                <span class="neu-toggle-slider"></span>
+                                                            </div>
+                                                        </label>
+                                                        <label class="neu-option-row" for="mirrorStructure">
+                                                            <div class="option-text-group">
+                                                                <span class="option-title">Structure changes</span>
+                                                                <p class="option-desc">Mirror new or edited channels and roles.</p>
+                                                            </div>
+                                                            <div class="neu-toggle">
+                                                                <input type="checkbox" id="mirrorStructure" checked>
+                                                                <span class="neu-toggle-slider"></span>
+                                                            </div>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Save / reset preferences -->
                                             <div class="config-actions-bar" id="configActionsBar">
                                                 <div class="config-btns-group">
-                                                    <button type="button" class="neu-btn-save-config" id="saveConfigBtn" title="Persist advanced preferences to browser storage">
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="save-icon" id="saveConfigIcon">
+                                                    <button type="button" class="neu-btn-save-config" id="saveConfigBtn" title="Persist preferences to browser storage">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="save-icon" id="saveConfigIcon" aria-hidden="true">
                                                             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
                                                             <polyline points="17 21 17 13 7 13 7 21"/>
                                                             <polyline points="7 3 7 8 15 8"/>
                                                         </svg>
-                                                        <span id="saveConfigBtnText">Save Configuration</span>
+                                                        <span id="saveConfigBtnText">Save configuration</span>
                                                     </button>
                                                     <button type="button" class="neu-btn-reset-config" id="resetConfigBtn" title="Restore default configuration">
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="reset-icon">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="reset-icon" aria-hidden="true">
                                                             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                                                             <path d="M3 3v5h5"/>
                                                         </svg>
-                                                        <span>Reset Defaults</span>
+                                                        <span>Reset defaults</span>
                                                     </button>
                                                 </div>
                                                 <div class="config-status-tag hidden" id="configSavedBadge">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="saved-icon">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="saved-icon" aria-hidden="true">
                                                         <polyline points="20 6 9 17 4 12"/>
                                                     </svg>
-                                                    <span id="configSavedText">Preferences Saved</span>
+                                                    <span id="configSavedText">Preferences saved</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -493,193 +588,249 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- 4. Primary CTA Buttons -->
-                    <div class="cta-actions-group">
-                        <button type="submit" id="startBtn" class="neu-btn-primary">
-                            <span class="btn-inner">
-                                <span id="startBtnText">START CLONING</span>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-arrow-icon" id="startBtnIcon">
-                                    <line x1="5" y1="12" x2="19" y2="12"/>
-                                    <polyline points="12 5 19 12 12 19"/>
+                        <!-- Primary actions -->
+                        <div class="cta-actions-group">
+                            <button type="submit" id="startBtn" class="neu-btn-primary" data-testid="start-button">
+                                <span class="btn-inner">
+                                    <span id="startBtnText">START CLONING</span>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-arrow-icon" id="startBtnIcon" aria-hidden="true">
+                                        <line x1="5" y1="12" x2="19" y2="12"/>
+                                        <polyline points="12 5 19 12 12 19"/>
+                                    </svg>
+                                </span>
+                            </button>
+
+                            <div class="cta-secondary-row">
+                                <button type="button" id="pauseBtn" class="neu-btn-secondary hidden" data-testid="pause-button">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <line x1="9" y1="5" x2="9" y2="19"/>
+                                        <line x1="15" y1="5" x2="15" y2="19"/>
+                                    </svg>
+                                    <span id="pauseBtnText">Pause</span>
+                                </button>
+                                <button type="button" id="cancelBtn" class="neu-btn-danger hidden" data-testid="cancel-button">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-cancel-icon" aria-hidden="true">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    </svg>
+                                    <span>Stop</span>
+                                </button>
+                            </div>
+
+                            <p class="cta-kbd-hint">
+                                <kbd>Ctrl</kbd><span aria-hidden="true">+</span><kbd>Enter</kbd> to start
+                                <span class="cta-kbd-sep" aria-hidden="true">·</span>
+                                <kbd>Esc</kbd> to close dialogs
+                            </p>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- ----------------------- TELEMETRY COLUMN ---------------------- -->
+                <section class="col col--telemetry" aria-label="Job status and activity">
+
+                    <!-- Status / progress -->
+                    <div class="neu-card panel panel--status" id="progressCard">
+                        <div class="telemetry-empty-state" id="telemetryEmptyState">
+                            <div class="empty-state-icon-raised" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polygon points="10 8 16 12 10 16 10 8"/>
                                 </svg>
-                            </span>
-                        </button>
-                        <p class="cta-kbd-hint">
-                            <kbd>Ctrl</kbd><span aria-hidden="true">+</span><kbd>Enter</kbd> to start
-                            <span class="cta-kbd-sep" aria-hidden="true">·</span>
-                            <kbd>Esc</kbd> to close dialogs
-                        </p>
-                        <button type="button" id="cancelBtn" class="neu-btn-danger hidden">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-cancel-icon">
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                            </svg>
-                            <span>Cancel Operation</span>
-                        </button>
-                    </div>
-
-                </form>
-            </section>
-
-            <!-- Right Column: Telemetry & Activity Console -->
-            <section class="workspace-col telemetry-column" aria-label="Clone Status and Activity Console">
-                
-                <!-- Telemetry / Status Card -->
-                <div class="neu-card" id="progressCard">
-                    <!-- Idle / Empty State Banner -->
-                    <div class="telemetry-empty-state" id="telemetryEmptyState">
-                        <div class="empty-state-icon-raised">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                <circle cx="12" cy="12" r="10"/>
-                                <polygon points="10 8 16 12 10 16 10 8"/>
-                            </svg>
-                        </div>
-                        <h3 class="empty-state-title">Ready to Clone</h3>
-                        <p class="empty-state-desc">Configure your token and server IDs, then start the migration sequence.</p>
-                    </div>
-
-                    <!-- Active Telemetry View (Hidden when idle) -->
-                    <div class="telemetry-active-view hidden" id="telemetryActiveView">
-                        <div class="active-header-row">
-                            <div class="stage-pill-raised" id="stagePill">
-                                <span class="stage-dot" id="stageDot"></span>
-                                <span id="stageLabel">Initializing...</span>
                             </div>
-                            <div class="active-timers-group">
-                                <div class="eta-pill" id="etaPill" title="Estimated Time Remaining based on server size and migration throughput">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="eta-icon">
-                                        <circle cx="12" cy="12" r="10"/>
-                                        <polyline points="12 6 12 12 16 14"/>
-                                    </svg>
-                                    <span class="eta-label">ETA:</span>
-                                    <span class="eta-value font-mono" id="etaTimer">Calculating...</span>
+                            <h3 class="empty-state-title">Ready to clone</h3>
+                            <p class="empty-state-desc">Add your token and the two server IDs, then start. Progress appears here.</p>
+                            <ul class="empty-state-list">
+                                <li>Structure is rebuilt in dependency order</li>
+                                <li>Failures are retried, then surfaced with a recovery action</li>
+                                <li>You can pause, stop, or resume a checkpointed job</li>
+                            </ul>
+                        </div>
+
+                        <div class="telemetry-active-view hidden" id="telemetryActiveView">
+                            <div class="active-header-row">
+                                <div class="stage-pill-raised" id="stagePill">
+                                    <span class="stage-dot" id="stageDot"></span>
+                                    <span id="stageLabel">Initialising…</span>
                                 </div>
-                                <div class="elapsed-badge font-mono" id="elapsedTimer" title="Elapsed Operation Time">00:00</div>
-                            </div>
-                        </div>
-
-                        <!-- Progress Bar & Percentage -->
-                        <div class="progress-section">
-                            <div class="progress-meta-row">
-                                <span class="progress-title">Overall Progress</span>
-                                <span class="progress-percent font-mono" id="progressText">0%</span>
-                            </div>
-                            <div class="neu-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Not started" aria-label="Migration progress" id="progressTrack">
-                                <div class="neu-progress-fill" id="progressBar"></div>
-                            </div>
-                            <div class="progress-sub-row">
-                                <span class="progress-detail" id="progressItemDetail">Connecting to Discord Gateway...</span>
-                                <span class="progress-counts font-mono" id="progressCounts">-</span>
-                            </div>
-                        </div>
-
-                        <!-- Compact Stats Counter Grid -->
-                        <div class="telemetry-stats-grid">
-                            <div class="stat-pill">
-                                <span class="stat-pill-label">Roles</span>
-                                <span class="stat-pill-val font-mono" id="liveStatRoles">0</span>
-                            </div>
-                            <div class="stat-pill">
-                                <span class="stat-pill-label">Channels</span>
-                                <span class="stat-pill-val font-mono" id="liveStatChannels">0</span>
-                            </div>
-                            <div class="stat-pill">
-                                <span class="stat-pill-label">Messages</span>
-                                <span class="stat-pill-val font-mono" id="liveStatMessages">0</span>
-                            </div>
-                            <div class="stat-pill">
-                                <span class="stat-pill-label">Warnings</span>
-                                <span class="stat-pill-val font-mono" id="liveStatWarnings">0</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Live Activity Console Card -->
-                <div class="neu-card console-card" id="consoleCard">
-                    <div class="console-card-header">
-                        <div class="console-title-group">
-                            <div class="live-indicator">
-                                <span class="live-dot"></span>
-                                <span class="live-label">LIVE ACTIVITY</span>
-                            </div>
-                            <span class="log-count-badge font-mono" id="logCountPill">0 entries</span>
-                        </div>
-
-                        <!-- Toolbar: Filters & Actions -->
-                        <div class="console-toolbar">
-                            <div class="filter-chips-scroll" role="group" aria-label="Log severity filter">
-                                <button type="button" class="filter-pill active" data-filter="all" aria-pressed="true">All <span class="filter-count font-mono" data-count="all">0</span></button>
-                                <button type="button" class="filter-pill" data-filter="info" aria-pressed="false">Info <span class="filter-count font-mono" data-count="info">0</span></button>
-                                <button type="button" class="filter-pill" data-filter="success" aria-pressed="false">Success <span class="filter-count font-mono" data-count="success">0</span></button>
-                                <button type="button" class="filter-pill" data-filter="warning" aria-pressed="false">Warnings <span class="filter-count font-mono" data-count="warning">0</span></button>
-                                <button type="button" class="filter-pill" data-filter="error" aria-pressed="false">Errors <span class="filter-count font-mono" data-count="error">0</span></button>
-                            </div>
-
-                            <div class="console-actions-group">
-                                <div class="neu-search-wrapper">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
-                                        <circle cx="11" cy="11" r="8"/>
-                                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                                    </svg>
-                                    <input type="text" id="logSearchInput" placeholder="Filter logs..." aria-label="Search activity logs">
+                                <div class="active-timers-group">
+                                    <div class="eta-pill" id="etaPill" title="Estimated time remaining">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="eta-icon" aria-hidden="true">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <polyline points="12 6 12 12 16 14"/>
+                                        </svg>
+                                        <span class="eta-label">ETA</span>
+                                        <span class="eta-value font-mono" id="etaTimer">—</span>
+                                    </div>
+                                    <div class="elapsed-badge font-mono" id="elapsedTimer" title="Elapsed time">00:00</div>
                                 </div>
-                                <button type="button" class="neu-action-btn" id="copyLogsBtn" title="Copy logs to clipboard" aria-label="Copy logs">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                                    </svg>
+                            </div>
+
+                            <!-- Phase pipeline -->
+                            <div class="stage-pipeline" id="stagePipeline" aria-hidden="true">
+                                <div class="pipeline-step" data-phase="prepare"><span class="pipeline-dot"></span><span class="pipeline-label">Prepare</span></div>
+                                <div class="pipeline-step" data-phase="structure"><span class="pipeline-dot"></span><span class="pipeline-label">Structure</span></div>
+                                <div class="pipeline-step" data-phase="content"><span class="pipeline-dot"></span><span class="pipeline-label">Content</span></div>
+                                <div class="pipeline-step" data-phase="verify"><span class="pipeline-dot"></span><span class="pipeline-label">Verify</span></div>
+                            </div>
+
+                            <div class="progress-section">
+                                <div class="progress-meta-row">
+                                    <span class="progress-title">Overall progress</span>
+                                    <span class="progress-percent font-mono" id="progressText">0%</span>
+                                </div>
+                                <div class="neu-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Not started" aria-label="Job progress" id="progressTrack">
+                                    <div class="neu-progress-fill" id="progressBar"></div>
+                                </div>
+                                <div class="progress-sub-row">
+                                    <span class="progress-detail" id="progressItemDetail">Connecting…</span>
+                                    <span class="progress-counts font-mono" id="progressCounts">—</span>
+                                </div>
+                            </div>
+
+                            <div class="telemetry-stats-grid">
+                                <div class="stat-pill">
+                                    <span class="stat-pill-label">Roles</span>
+                                    <span class="stat-pill-val font-mono" id="liveStatRoles">0</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <span class="stat-pill-label">Channels</span>
+                                    <span class="stat-pill-val font-mono" id="liveStatChannels">0</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <span class="stat-pill-label">Messages</span>
+                                    <span class="stat-pill-val font-mono" id="liveStatMessages">0</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <span class="stat-pill-label">Warnings</span>
+                                    <span class="stat-pill-val font-mono" id="liveStatWarnings">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recovery / error state -->
+                        <div class="recovery-panel hidden" id="recoveryPanel" role="alert">
+                            <div class="recovery-head">
+                                <span class="recovery-icon" id="recoveryIcon" aria-hidden="true">!</span>
+                                <div>
+                                    <p class="recovery-title" id="recoveryTitle">Something went wrong</p>
+                                    <p class="recovery-desc" id="recoveryDesc"></p>
+                                </div>
+                            </div>
+                            <div class="recovery-actions">
+                                <button type="button" class="neu-btn-primary compact" id="resumeJobBtn" data-testid="resume-button">
+                                    <span id="resumeJobBtnText">Resume from checkpoint</span>
                                 </button>
-                                <button type="button" class="neu-action-btn" id="clearLogsBtn" title="Clear log output" aria-label="Clear visible logs">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="3 6 5 6 21 6"/>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                    </svg>
-                                </button>
+                                <button type="button" class="neu-btn-secondary compact" id="dismissRecoveryBtn">Dismiss</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Inset Neumorphic Terminal Log Stream -->
-                    <div class="neu-terminal-container" id="terminal">
-                        <div class="log-stream" id="logStream" role="log" aria-live="off" aria-relevant="additions">
-                            <div class="log-entry log-entry-info">
-                                <span class="log-time font-mono">00:00:00</span>
-                                <span class="log-icon-type">→</span>
-                                <span class="log-message">Ready. Enter credentials and server IDs to start synchronization.</span>
+                    <!-- Queue -->
+                    <div class="neu-card panel panel--queue" id="queueCard">
+                        <header class="panel-head compact">
+                            <div class="card-icon-bubble small" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="8" y1="6" x2="21" y2="6"/>
+                                    <line x1="8" y1="12" x2="21" y2="12"/>
+                                    <line x1="8" y1="18" x2="21" y2="18"/>
+                                    <circle cx="3.5" cy="6" r="1"/>
+                                    <circle cx="3.5" cy="12" r="1"/>
+                                    <circle cx="3.5" cy="18" r="1"/>
+                                </svg>
+                            </div>
+                            <div class="card-header-titles">
+                                <h2 class="card-title">Job queue</h2>
+                                <p class="card-desc" id="queueMeta">No jobs yet</p>
+                            </div>
+                            <button type="button" class="neu-icon-btn" id="clearQueueBtn" aria-label="Cancel all queued jobs" title="Cancel all queued jobs" hidden>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </header>
+
+                        <div class="queue-body">
+                            <p class="queue-empty" id="queueEmpty">Queued and recent jobs appear here. Start one to see live position and estimated wait.</p>
+                            <ul class="queue-list" id="queueList" aria-live="polite"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Activity console -->
+                    <div class="neu-card console-card panel panel--console" id="consoleCard">
+                        <div class="console-card-header">
+                            <div class="console-title-group">
+                                <div class="live-indicator">
+                                    <span class="live-dot"></span>
+                                    <span class="live-label">LIVE ACTIVITY</span>
+                                </div>
+                                <span class="log-count-badge font-mono" id="logCountPill">0 entries</span>
+                            </div>
+
+                            <div class="console-toolbar">
+                                <div class="filter-chips-scroll" role="group" aria-label="Log severity filter">
+                                    <button type="button" class="filter-pill active" data-filter="all" aria-pressed="true">All <span class="filter-count font-mono" data-count="all">0</span></button>
+                                    <button type="button" class="filter-pill" data-filter="info" aria-pressed="false">Info <span class="filter-count font-mono" data-count="info">0</span></button>
+                                    <button type="button" class="filter-pill" data-filter="success" aria-pressed="false">Success <span class="filter-count font-mono" data-count="success">0</span></button>
+                                    <button type="button" class="filter-pill" data-filter="warning" aria-pressed="false">Warnings <span class="filter-count font-mono" data-count="warning">0</span></button>
+                                    <button type="button" class="filter-pill" data-filter="error" aria-pressed="false">Errors <span class="filter-count font-mono" data-count="error">0</span></button>
+                                </div>
+
+                                <div class="console-actions-group">
+                                    <div class="neu-search-wrapper">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon" aria-hidden="true">
+                                            <circle cx="11" cy="11" r="8"/>
+                                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                        </svg>
+                                        <input type="text" id="logSearchInput" placeholder="Filter logs…" aria-label="Search activity logs" spellcheck="false">
+                                    </div>
+                                    <button type="button" class="neu-action-btn" id="copyLogsBtn" title="Copy logs to clipboard" aria-label="Copy logs">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="neu-action-btn" id="clearLogsBtn" title="Clear log output" aria-label="Clear visible logs">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Filtered-empty state -->
-                        <div class="log-empty-state hidden" id="logEmptyState">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-                                <circle cx="11" cy="11" r="8"/>
-                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                            </svg>
-                            <p class="log-empty-title" id="logEmptyTitle">No matching activity</p>
-                            <p class="log-empty-desc" id="logEmptyDesc">Adjust the severity filter or clear the search to see entries.</p>
+                        <div class="neu-terminal-container" id="terminal">
+                            <div class="log-stream" id="logStream" role="log" aria-live="off" aria-relevant="additions"></div>
+
+                            <div class="log-empty-state hidden" id="logEmptyState">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                                <p class="log-empty-title" id="logEmptyTitle">No activity yet</p>
+                                <p class="log-empty-desc" id="logEmptyDesc">Log output will stream here once a job starts.</p>
+                            </div>
+
+                            <div class="sr-only" id="logAnnouncer" role="status" aria-live="polite" aria-atomic="true"></div>
+
+                            <button type="button" class="jump-latest-pill hidden" id="jumpLatestBtn">
+                                <span>↓ New activity</span>
+                            </button>
                         </div>
-
-                        <!-- Floating Jump to Latest Button -->
-                        <div class="sr-only" id="logAnnouncer" role="status" aria-live="polite" aria-atomic="true"></div>
-
-                        <button type="button" class="jump-latest-pill hidden" id="jumpLatestBtn">
-                            <span>↓ New activity received</span>
-                        </button>
                     </div>
-                </div>
-
-            </section>
+                </section>
+            </div>
         </main>
     </div>
 
-    <!-- Modals System -->
-    
-    <!-- 1. Confirmation Modal & Preflight Preview -->
+    <!-- ============================== MODALS ============================== -->
+
+    <!-- 1. Confirmation + preflight -->
     <div class="modal-backdrop hidden" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
         <div class="neu-modal-card">
-            <div class="modal-header-icon warning-icon-bg">
+            <div class="modal-header-icon warning-icon-bg" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                     <line x1="12" y1="9" x2="12" y2="13"/>
@@ -687,140 +838,123 @@
                 </svg>
             </div>
             <div class="modal-body-content">
-                <h3 class="modal-title" id="confirmTitle">Confirm Migration Sequence</h3>
-                <p class="modal-desc" id="confirmDesc">
-                    Inspect the source-to-target routing and preflight checks before proceeding.
-                </p>
-                <div class="confirm-route-box">
-                    <div class="route-item">
-                        <span class="route-label">Source Server:</span>
-                        <span class="route-val font-mono" id="confirmSourceId">-</span>
+                <h3 class="modal-title" id="confirmTitle">Confirm migration</h3>
+                <p class="modal-desc">Review the routing and preflight result before starting.</p>
+
+                <div class="modal-route-row">
+                    <div class="modal-route-cell">
+                        <span class="modal-route-label">Source</span>
+                        <span class="modal-route-value font-mono" id="confirmSourceId">—</span>
                     </div>
-                    <div class="route-divider">↓</div>
-                    <div class="route-item">
-                        <span class="route-label">Target Server:</span>
-                        <span class="route-val font-mono" id="confirmTargetId">-</span>
+                    <span class="modal-route-arrow" aria-hidden="true">→</span>
+                    <div class="modal-route-cell">
+                        <span class="modal-route-label">Target</span>
+                        <span class="modal-route-value font-mono" id="confirmTargetId">—</span>
                     </div>
                 </div>
 
-                <!-- Preflight Status Container -->
                 <div class="preflight-box" id="preflightBox">
-                    <div class="preflight-header-row">
-                        <span class="preflight-status-badge" id="preflightStatusBadge">PREFLIGHT READY</span>
-                        <span class="preflight-sub-text" id="preflightSubText">Verification checks passed</span>
+                    <div class="preflight-head">
+                        <span class="preflight-status-badge" id="preflightStatusBadge">CHECKING…</span>
+                        <span class="preflight-sub" id="preflightSubText">Querying guild access &amp; permissions…</span>
                     </div>
-                    <div class="preflight-checks-list" id="preflightChecksList"></div>
-                    
-                    <!-- Destructive Cleanup Warning (Shown when Clean Target is enabled) -->
-                    <div class="cleanup-alert-box hidden" id="confirmCleanupAlert">
-                        <div class="cleanup-alert-icon">⚠️</div>
-                        <div class="cleanup-alert-text">
-                            <strong>Clean Target Server is ENABLED:</strong> Existing non-system channels and custom roles on the target server will be permanently deleted before replication.
-                        </div>
+                    <div class="preflight-checks" id="preflightChecksList"></div>
+                </div>
+
+                <div class="cleanup-alert-box hidden" id="confirmCleanupAlert">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <div>
+                        <strong>Clean target server is enabled.</strong>
+                        Existing non-system channels and custom roles on the target will be permanently deleted before replication.
                     </div>
                 </div>
             </div>
             <div class="modal-actions-row">
                 <button type="button" class="neu-btn-secondary" id="cancelConfirmBtn">Cancel</button>
-                <button type="button" class="neu-btn-primary" id="proceedConfirmBtn">Start Migration</button>
+                <button type="button" class="neu-btn-primary" id="proceedConfirmBtn" disabled>Verifying…</button>
             </div>
         </div>
     </div>
 
-    <!-- 2. Migration Summary / Success Modal -->
+    <!-- 2. Summary -->
     <div class="modal-backdrop hidden" id="summaryModal" role="dialog" aria-modal="true" aria-labelledby="summaryTitle">
-        <div class="neu-modal-card success-modal">
-            <div class="modal-header-icon success-icon-bg">
+        <div class="neu-modal-card">
+            <div class="modal-header-icon success-icon-bg" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
+                    <polyline points="20 6 9 17 4 12"/>
                 </svg>
             </div>
             <div class="modal-body-content">
-                <div class="summary-status-header">
-                    <span class="verification-badge" id="statVerifyStatus">VERIFIED</span>
+                <h3 class="modal-title" id="summaryTitle">Migration completed</h3>
+                <p class="modal-desc" id="summarySubtitle">Everything requested was applied to the target server.</p>
+
+                <div class="summary-stats-grid">
+                    <div class="summary-stat">
+                        <span class="summary-stat-label">Duration</span>
+                        <span class="summary-stat-val font-mono" id="statDuration">—</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="summary-stat-label">Roles</span>
+                        <span class="summary-stat-val font-mono" id="statRoles">0</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="summary-stat-label">Categories</span>
+                        <span class="summary-stat-val font-mono" id="statCategories">0</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="summary-stat-label">Channels</span>
+                        <span class="summary-stat-val font-mono" id="statChannels">0</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="summary-stat-label">Messages</span>
+                        <span class="summary-stat-val font-mono" id="statMessages">0</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="summary-stat-label">Warnings</span>
+                        <span class="summary-stat-val font-mono" id="statWarnings">0</span>
+                    </div>
                 </div>
-                <h3 class="modal-title" id="summaryTitle">Migration Completed</h3>
-                <p class="modal-desc" id="summaryDesc">
-                    Requested server assets, roles, channels, and records have been replicated and verified.
-                </p>
-                <div class="stats-summary-grid">
-                    <div class="stat-card-raised">
-                        <span class="stat-card-label">Duration</span>
-                        <span class="stat-card-val font-mono" id="statDuration">0s</span>
-                    </div>
-                    <div class="stat-card-raised">
-                        <span class="stat-card-label">Roles Created</span>
-                        <span class="stat-card-val font-mono" id="statRoles">0</span>
-                    </div>
-                    <div class="stat-card-raised">
-                        <span class="stat-card-label">Categories</span>
-                        <span class="stat-card-val font-mono" id="statCategories">0</span>
-                    </div>
-                    <div class="stat-card-raised">
-                        <span class="stat-card-label">Channels</span>
-                        <span class="stat-card-val font-mono" id="statChannels">0</span>
-                    </div>
-                    <div class="stat-card-raised">
-                        <span class="stat-card-label">Permissions</span>
-                        <span class="stat-card-val font-mono" id="statPermissions">0 applied</span>
-                    </div>
-                    <div class="stat-card-raised">
-                        <span class="stat-card-label">Messages / Files</span>
-                        <span class="stat-card-val font-mono" id="statMessages">Disabled</span>
-                    </div>
-                    <div class="stat-card-raised">
-                        <span class="stat-card-label">Cleanup Status</span>
-                        <span class="stat-card-val font-mono" id="statCleanup">-</span>
-                    </div>
-                    <div class="stat-card-raised">
-                        <span class="stat-card-label">Warnings</span>
-                        <span class="stat-card-val font-mono" id="statWarnings">0</span>
-                    </div>
+
+                <div class="summary-verify-row">
+                    <span class="summary-stat-label">Verification</span>
+                    <span class="verification-badge" id="statVerifyStatus">—</span>
+                    <span class="summary-stat-label">Permissions</span>
+                    <span class="verification-badge" id="statPermissions">—</span>
+                    <span class="summary-stat-label">Cleanup</span>
+                    <span class="verification-badge" id="statCleanup">—</span>
                 </div>
             </div>
             <div class="modal-actions-row">
-                <button type="button" class="neu-btn-secondary" id="viewLogsSummaryBtn">View Activity Log</button>
+                <button type="button" class="neu-btn-secondary" id="viewLogsSummaryBtn">View activity log</button>
                 <button type="button" class="neu-btn-primary" id="closeSummaryBtn">Done</button>
             </div>
         </div>
     </div>
 
-    <!-- 3. Guides & Help Modal -->
+    <!-- 3. Guides -->
     <div class="modal-backdrop hidden" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
-        <div class="neu-modal-card guide-modal">
+        <div class="neu-modal-card">
             <div class="modal-header-simple">
-                <div class="guide-title-row">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-title-icon">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    <h3 class="modal-title" id="helpTitle">Migration Guide & Setup</h3>
+                <div>
+                    <h3 class="modal-title" id="helpTitle">Migration guide &amp; setup</h3>
+                    <p class="modal-desc">Everything you need before the first run.</p>
                 </div>
-                <button type="button" class="modal-close-btn" id="closeHelpBtn" aria-label="Close guide modal">✕</button>
+                <button type="button" class="modal-close-btn" id="closeHelpBtn" aria-label="Close guide">✕</button>
             </div>
             <div class="modal-scroll-body">
-                <div class="guide-step-card">
-                    <div class="step-badge">1</div>
-                    <div class="step-body">
-                        <h4>Enable Developer Mode in Discord</h4>
-                        <p>Go to Discord Settings → Advanced → Toggle <strong>Developer Mode</strong> ON. This allows you to right-click servers and copy their 17–20 digit Snowflake ID.</p>
-                    </div>
-                </div>
-                <div class="guide-step-card">
-                    <div class="step-badge">2</div>
-                    <div class="step-body">
-                        <h4>Account Permissions</h4>
-                        <p>Your Discord account must have <strong>Administrator</strong> or <strong>Manage Server / Manage Roles / Manage Channels</strong> permissions on the target server.</p>
-                    </div>
-                </div>
-                <div class="guide-step-card">
-                    <div class="step-badge">3</div>
-                    <div class="step-body">
-                        <h4>Message Synchronization (Optional)</h4>
-                        <p>Message cloning is OFF by default. If enabled in Advanced Settings, messages are replicated using Discord webhooks with original author names and avatars.</p>
-                    </div>
+                <ol class="guide-list">
+                    <li><strong>Get a user token.</strong> Open Discord in a browser, find the token in the app's local storage, and treat it like a password.</li>
+                    <li><strong>Enable developer mode</strong> in Discord settings to copy server IDs from the context menu.</li>
+                    <li><strong>Confirm permissions.</strong> Your account needs Manage Channels, Manage Roles, Manage Webhooks and Manage Server on the target.</li>
+                    <li><strong>Run preflight.</strong> It verifies both servers and previews what cleanup will delete.</li>
+                    <li><strong>Choose a mode.</strong> One-shot copies once; continuous mirror keeps forwarding until stopped.</li>
+                </ol>
+                <div class="guide-note">
+                    <strong>Account risk:</strong> automating a user account violates Discord's Terms of Service. Use a throwaway account on servers you own.
                 </div>
             </div>
             <div class="modal-actions-row">
@@ -829,44 +963,29 @@
         </div>
     </div>
 
-    <!-- 4. Presets Modal -->
+    <!-- 4. Presets -->
     <div class="modal-backdrop hidden" id="templatesModal" role="dialog" aria-modal="true" aria-labelledby="templatesTitle">
-        <div class="neu-modal-card template-modal">
+        <div class="neu-modal-card">
             <div class="modal-header-simple">
-                <div class="guide-title-row">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-title-icon">
-                        <rect x="3" y="3" width="7" height="7"/>
-                        <rect x="14" y="3" width="7" height="7"/>
-                        <rect x="14" y="14" width="7" height="7"/>
-                        <rect x="3" y="14" width="7" height="7"/>
-                    </svg>
-                    <h3 class="modal-title" id="templatesTitle">Migration Presets</h3>
+                <div>
+                    <h3 class="modal-title" id="templatesTitle">Migration presets</h3>
+                    <p class="modal-desc">One tap applies a sensible option set.</p>
                 </div>
-                <button type="button" class="modal-close-btn" id="closeTemplatesBtn" aria-label="Close presets modal">✕</button>
+                <button type="button" class="modal-close-btn" id="closeTemplatesBtn" aria-label="Close presets">✕</button>
             </div>
             <div class="modal-scroll-body">
-                <div class="template-grid">
+                <div class="preset-grid">
                     <button type="button" class="template-item-card" data-preset="standard">
-                        <div class="template-item-header">
-                            <span class="template-name">Full Server Architecture (Recommended)</span>
-                            <span class="badge-tag">DEFAULT</span>
-                        </div>
-                        <p class="template-desc">Clones roles, channels, category hierarchy, permissions, and server profile.</p>
+                        <span class="template-title">Full server architecture</span>
+                        <span class="template-desc">Roles, channels and permissions. No history.</span>
                     </button>
-
                     <button type="button" class="template-item-card" data-preset="complete-archive">
-                        <div class="template-item-header">
-                            <span class="template-name">Complete Server Archive</span>
-                            <span class="badge-tag warning-badge">DEEP SYNC</span>
-                        </div>
-                        <p class="template-desc">Clones all architecture PLUS recent message history and attachments via webhooks.</p>
+                        <span class="template-title">Complete archive</span>
+                        <span class="template-desc">Everything, including recent messages and attachments.</span>
                     </button>
-
                     <button type="button" class="template-item-card" data-preset="roles-only">
-                        <div class="template-item-header">
-                            <span class="template-name">Roles & Permissions Only</span>
-                        </div>
-                        <p class="template-desc">Clones only role hierarchy and bitfield permissions without creating channels.</p>
+                        <span class="template-title">Roles &amp; permissions only</span>
+                        <span class="template-desc">Rebuild the permission model without touching channels.</span>
                     </button>
                 </div>
             </div>
@@ -876,78 +995,73 @@
         </div>
     </div>
 
-    <!-- 5. About Modal -->
+    <!-- 5. About -->
     <div class="modal-backdrop hidden" id="supportModal" role="dialog" aria-modal="true" aria-labelledby="supportTitle">
         <div class="neu-modal-card">
             <div class="modal-header-simple">
-                <div class="guide-title-row">
+                <div>
                     <h3 class="modal-title" id="supportTitle">About DISCLONER</h3>
+                    <p class="modal-desc">Self-hosted migration studio.</p>
                 </div>
-                <button type="button" class="modal-close-btn" id="closeSupportBtn" aria-label="Close about modal">✕</button>
+                <button type="button" class="modal-close-btn" id="closeSupportBtn" aria-label="Close about">✕</button>
             </div>
             <div class="modal-body-content">
                 <p class="modal-desc">
-                    <strong>DISCLONER Studio</strong> is a precision Discord server synchronization platform engineered for Discord administrators and community creators.
+                    <strong>DISCLONER STUDIO</strong> is a precision Discord server synchronisation tool built for administrators who need an auditable, resumable copy.
                 </p>
                 <div class="support-info-box">
                     <div class="support-info-row">
-                        <span class="support-info-label">Version:</span>
-                        <span class="support-info-val font-mono">v2.3.0 (Refined)</span>
+                        <span class="support-info-label">Version</span>
+                        <span class="support-info-val font-mono" id="aboutVersion">v3.0.0</span>
                     </div>
                     <div class="support-info-row">
-                        <span class="support-info-label">Theme Engine:</span>
-                        <span class="support-info-val">Dual Neumorphic (Light default, Dark supported)</span>
+                        <span class="support-info-label">Theme engine</span>
+                        <span class="support-info-val">Dual neumorphic (light default, dark supported)</span>
                     </div>
                     <div class="support-info-row">
-                        <span class="support-info-label">Security:</span>
-                        <span class="support-info-val">In-memory ephemeral token processing, automatic log redaction</span>
+                        <span class="support-info-label">Modes</span>
+                        <span class="support-info-val">One-shot clone · Continuous mirror</span>
+                    </div>
+                    <div class="support-info-row">
+                        <span class="support-info-label">Job state</span>
+                        <span class="support-info-val" id="aboutStorage">Local, checkpointed</span>
                     </div>
                 </div>
             </div>
             <div class="modal-actions-row">
-                <button type="button" class="neu-btn-primary" id="dismissSupportBtn">Got It</button>
+                <button type="button" class="neu-btn-primary" id="dismissSupportBtn">Got it</button>
             </div>
         </div>
     </div>
 
-    <!-- Guided Onboarding Tour Overlay & Spotlight Modal -->
-    <div class="tour-overlay hidden" id="tourOverlay" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
-        <div class="tour-backdrop" id="tourBackdrop"></div>
-        <div class="tour-spotlight-frame" id="tourSpotlight"></div>
-        <div class="tour-card" id="tourCard">
-            <div class="tour-mobile-handle" aria-hidden="true"></div>
-            <div class="tour-card-header">
-                <div class="tour-badge-group">
-                    <span class="badge-tag">ONBOARDING TOUR</span>
-                    <span class="tour-step-counter font-mono" id="tourStepCounter">Step 1 of 6</span>
-                </div>
-                <button type="button" class="tour-close-btn" id="tourCloseBtn" aria-label="Close tour">✕</button>
-            </div>
-            <div class="tour-card-body">
-                <h3 class="tour-step-title" id="tourTitle">Welcome to Discloner Studio</h3>
-                <p class="tour-step-desc" id="tourDesc">Let's take a quick 1-minute walkthrough to help you replicate Discord servers quickly and securely.</p>
-            </div>
-            <div class="tour-card-footer">
-                <div class="tour-progress-dots" id="tourDots"></div>
-                <div class="tour-actions">
-                    <button type="button" class="tour-btn-skip" id="tourSkipBtn">Skip</button>
-                    <button type="button" class="tour-btn-back hidden" id="tourBackBtn">Back</button>
-                    <button type="button" class="tour-btn-next" id="tourNextBtn">
-                        <span id="tourNextBtnText">Next</span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="tour-arrow-icon">
-                            <line x1="5" y1="12" x2="19" y2="12"/>
-                            <polyline points="12 5 19 12 12 19"/>
-                        </svg>
-                    </button>
-                </div>
-            </div>
+    <!-- 6. Guided tour -->
+    <div class="tour-overlay hidden" id="tourOverlay" aria-hidden="true"></div>
+    <div class="tour-spotlight hidden" id="tourSpotlight" aria-hidden="true"></div>
+    <div class="tour-backdrop hidden" id="tourBackdrop"></div>
+    <aside class="tour-card hidden" id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+        <div class="tour-mobile-handle" aria-hidden="true"></div>
+        <button type="button" class="tour-close-btn" id="tourCloseBtn" aria-label="Close tour">✕</button>
+        <div class="tour-step-counter font-mono" id="tourStepCounter">1 / 4</div>
+        <h3 class="tour-step-title" id="tourTitle">Welcome to Discloner Studio</h3>
+        <p class="tour-step-desc" id="tourDesc">A quick tour of the three-step workflow.</p>
+        <div class="tour-dots" id="tourDots" aria-hidden="true"></div>
+        <div class="tour-actions">
+            <button type="button" class="tour-btn-skip" id="tourSkipBtn">Skip</button>
+            <button type="button" class="tour-btn-back hidden" id="tourBackBtn">Back</button>
+            <button type="button" class="tour-btn-next" id="tourNextBtn">
+                <span id="tourNextBtnText">Next</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="tour-arrow-icon" aria-hidden="true">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                </svg>
+            </button>
         </div>
-    </div>
+    </aside>
 
-    <!-- Toast Notification Container -->
     <div class="toast-container" id="toastContainer" role="status" aria-live="polite" aria-relevant="additions"></div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+    <!-- Socket.IO transport (served by the app itself, so CSP stays `self`) -->
+    <script src="/socket.io/socket.io.js" defer></script>
+    <script type="module" src="/js/main.js"></script>
 </body>
 </html>

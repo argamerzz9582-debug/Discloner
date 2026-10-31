@@ -1,0 +1,90 @@
+# =============================================================================
+# DISCLONER STUDIO — local / single-host deployment
+#
+#   docker compose up --build
+#   open http://localhost:3000
+#
+# Security note: this UI accepts a Discord user token. The port is bound to
+# 127.0.0.1 on purpose — publish it behind an authenticating reverse proxy
+# (Caddy, nginx, Traefik) if you need remote access. Never expose it publicly
+# without TLS and an auth layer.
+# =============================================================================
+
+services:
+  discloner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: discloner:3.0.0
+    container_name: discloner
+    restart: unless-stopped
+
+    ports:
+      # host:container — loopback only. Change to "3000:3000" only behind a proxy.
+      - "127.0.0.1:3000:3000"
+
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOST: 0.0.0.0
+
+      # Concurrency and queue
+      MAX_CONCURRENT_JOBS: "2"
+      MAX_QUEUED_JOBS: "20"
+      MAX_MIRROR_SESSIONS: "1"
+
+      # Resumable jobs (checkpointed to the volume below)
+      PERSIST_JOBS: "true"
+      JOB_STATE_DIR: /data/state
+      STATE_RETENTION_DAYS: "7"
+
+      # Observability
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+
+      # Feature flags
+      FEATURE_CONTINUOUS_MIRROR: "true"
+      FEATURE_MULTI_JOB: "true"
+      FEATURE_RESUME: "true"
+      FEATURE_TELEMETRY: "false"
+
+      # Telemetry stays off unless both are provided
+      TELEMETRY_OPT_IN: "false"
+      # TELEMETRY_ENDPOINT: https://telemetry.example.com/v1/events
+
+      # CORS: leave unset for same-origin only.
+      # ALLOWED_ORIGINS: https://discloner.example.com
+
+    volumes:
+      - discloner-state:/data
+
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+    # Hardening: a compromised job cannot write to the root filesystem.
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 20s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  discloner-state:
+    driver: local

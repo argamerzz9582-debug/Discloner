@@ -1,3 +1,6 @@
+# Runtime state (job checkpoints; never contains credentials)
+.discloner/
+
 # Dependencies
 node_modules/
 

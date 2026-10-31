@@ -1,157 +1,279 @@
-# Discord Server Cloner & Migration Studio
+# DISCLONER STUDIO
 
-A modern, high-reliability Discord server migration and synchronization platform powered by Node.js, Express, and Socket.IO.
+> **Precision Discord server migration, continuous mirroring and resumable jobs.**
 
-## Overview
+Discloner Studio is a self-hosted control room for moving a Discord server — or keeping two of them in
+sync — without losing structure, permissions or history. It is built for administrators who want an
+auditable, interruptible copy rather than a one-shot script they have to babysit.
 
-Discord Server Cloner allows administrators to clone Discord servers — synchronizing role hierarchies, channels, permission overwrites, server branding, and recent message histories via Webhooks with granular real-time telemetry.
+```
+     ┌──────────────┐        ┌────────────────────┐        ┌──────────────┐
+     │    SOURCE    │───────▶│  DISCLONER STUDIO  │───────▶│    TARGET    │
+     │    guild     │  read  │  jobs · queue · UI │  write │    guild     │
+     └──────────────┘        └────────────────────┘        └──────────────┘
+```
+
+---
+
+## ⚠️ Read this before you start
+
+- **This tool authenticates as a user account.** It uses `discord.js-selfbot-v13` with a *user token*,
+  which is **against Discord's Terms of Service**. Accounts used this way can be permanently disabled.
+  Use a throwaway account, on servers you own, with your eyes open.
+- **It can delete things.** *Clean target server* purges existing channels and custom roles on the
+  target. There is a confirmation dialog, and the operation is never replayed by a resume — but it is
+  still destructive.
+- **It is a credential-accepting UI.** By default it binds to `0.0.0.0:3000`. If the host is reachable
+  from an untrusted network, set `HOST=127.0.0.1` (recommended) or put it behind an authenticating
+  reverse proxy with TLS. Never expose it to the public internet as-is.
 
 ---
 
 ## Features
 
-- **Full Guild Replication**:
-  - **Server Profile**: Name, icon (dynamic 4096px), and server banner.
-  - **Role Hierarchy**: Replicates roles, colors, hoist settings, mentionable flags, and bitfield permissions while preserving position order.
-  - **Categories & Channels**: Creates categories and child channels (text, voice, announcements) with identical topics, NSFW flags, and bitrate.
-  - **Permission Overwrites**: Remaps role IDs and applies channel-level privacy and permission overrides.
-  - **Chat Logs & Media**: Synchronizes recent messages and attachments using Discord webhooks with matching usernames and avatars.
-- **Granular Stage Telemetry**: Real-time progress bar with item counts, active stage pills, and live elapsed timer.
-- **Interactive Activity Console**:
-  - Real-time structured log streaming (timestamps, status badges, contextual metadata).
-  - Client-side severity filters (`All`, `Info`, `Success`, `Warnings`, `Errors`) with **live per-severity counts**.
-  - Search query filtering by channel, role name, or message.
-  - Explicit empty states that distinguish "nothing has happened yet" from "your filter hides everything".
-  - One-click log export / clipboard copy and auto-scroll control.
-- **Interface & Accessibility**:
-  - **Stateful workflow stepper** — the Token → Source & Target → Clone tracker reflects real form state instead of being decorative.
-  - **Keyboard first**: `Ctrl`/`Cmd` + `Enter` starts a migration, `Esc` dismisses the top-most dialog, dialogs trap focus and restore it to the trigger, and a skip link jumps straight to the workspace.
-  - **Responsive action dock**: on tablet/mobile the primary CTA stays pinned within thumb reach, and the header navigation becomes a scrollable row instead of disappearing.
-  - **Theme that remembers**: the saved light/dark choice is honoured on reload, with the OS preference used on a first visit (applied before first paint, so there is no flash).
-  - **Motion with intent**: progress sheen, counter bumps and dialog entrances all collapse under `prefers-reduced-motion`.
-  - Tuned dark-mode text contrast (muted text now clears WCAG AA) and a single consistent `:focus-visible` ring.
-- **Security & Privacy**:
-  - **Memory-only credentials by default**: the Discord token is never written to disk unless you explicitly flip *Remember token on this device* (off by default, with an inline warning).
-  - **Exact-value + pattern token redaction**: any accepted credential is registered with the logger and scrubbed from every log line, error detail, and socket payload — even if it does not match Discord's usual token shape.
-  - **Start/preflight throttling**: both operations authenticate the account, so they are rate limited (5 starts/min per IP, 12 preflights/min, plus per-connection cooldowns) to protect the token from accidental retry storms.
-  - **Job ownership**: cancelling a job requires the owning socket or the one-time job capability token issued at start — another browser tab or client cannot abort your migration.
-  - **Strict CSP & security headers**: no inline scripts (`'unsafe-inline'` is confined to styles), `nosniff`, `no-referrer`, and `no-store` on API responses.
-  - **Graceful shutdown**: `SIGINT`/`SIGTERM` signal running jobs and let the Discord client close through the normal teardown path instead of orphaning gateway sessions.
-  - Destructive operation confirmation modal before target server clearing.
+### Migration modes
+
+| Mode | What it does | When to use it |
+| --- | --- | --- |
+| **One-shot clone** | Copies roles, categories, channels, permission overwrites, branding, emojis, stickers, webhooks and (optionally) recent messages, then stops. | A straight migration. |
+| **Continuous mirror** | Keeps a long-lived gateway session open and forwards new messages (plus optional edits, deletions and structure changes) into the target in near real time. | Parallel/dual-running servers, archives, staging. |
+
+Both modes share the same engine, the same checkpoint format and the same UI.
+
+### Resumable jobs
+
+Every stage writes a checkpoint: current stage, progress, completed stages, created role/channel maps
+and per-channel message cursors. If the process restarts, the browser reloads or the socket drops, the
+job can be resumed from the last good stage instead of starting over.
+
+- Checkpoints are written atomically (`tmp` + `rename`) to `.discloner/state/` by default.
+- A checkpoint **never** contains a token, a webhook URL or message content — only IDs, stage names and counters.
+- Resuming requires the one-time `resumeKey` issued when the job started, so another tab cannot hijack it.
+- Cleanup of the target is deliberately non-replayable: a resume never re-deletes anything.
+
+### Multi-job queue
+
+- Concurrent execution with a configurable ceiling (`MAX_CONCURRENT_JOBS`, default **2**).
+- Priority bands — `high`, `normal`, `low` — FIFO inside each band.
+- Visible position and estimated wait, derived from observed job durations.
+- Cancel one job, or drain the whole queue.
+
+### Error handling
+
+Failures are classified before they reach the UI:
+
+- **Recoverable** (rate limits, timeouts, transient gateway errors) — retried with exponential backoff
+  and jitter; if it still fails, the job is offered as resumable.
+- **Fatal** (bad token, missing permissions, invalid IDs) — surfaced immediately with a recovery action,
+  no pointless retries.
+- **Skip-and-continue** — a single unwritable channel or role does not abort the whole migration.
+
+### Interface
+
+- **Three-step workflow** — Token → Source & Target → Clone — that reflects real form state.
+- **Live pipeline** — stage pill, four-phase pipeline, percentage bar with sheen, per-stage item counts,
+  and an ETA derived from elapsed progress.
+- **Activity console** — severity filters with live counts, search, clipboard export, and empty states
+  that distinguish *"nothing has happened yet"* from *"your filter hides everything"*.
+- **Quiet by default** — advanced options live behind an accordion; the primary action is the only
+  filled button on the page.
+- **Mobile-first** — stacked routing cards, a pinned action in the thumb zone, safe-area padding,
+  horizontally scrolling filter chips.
+- **Accessible** — WCAG AA contrast in both themes, visible focus rings, focus-trapped dialogs,
+  skip link, `aria-live` announcements, and every animation collapses under `prefers-reduced-motion`.
+
+### Security model
+
+- **Credentials stay in memory.** The token lives in the job's closure; it is never persisted. The
+  browser keeps it in memory too, unless you explicitly enable *Remember token on this device* (which
+  stores it **unencrypted** in `localStorage` — the UI says so).
+- **Exact-value redaction.** Any accepted token is registered with the logger and scrubbed from every
+  log line, error detail and socket payload, even if it does not match Discord's token shape.
+- **Job capability tokens.** Controlling a job requires the owning socket *or* the 24-byte capability
+  token issued at start.
+- **Rate limiting.** Starts and preflights are throttled per IP and per socket because both
+  authenticate the account.
+- **Strict CSP.** `script-src 'self'`, no inline scripts, `nosniff`, `no-referrer`, `no-store` on API
+  responses.
+- **No outbound telemetry** unless you set both `FEATURE_TELEMETRY=true` and `TELEMETRY_OPT_IN=true`
+  *and* provide an endpoint. See `SECURITY.md`.
 
 ---
 
-## Prerequisites
-
-- **Node.js**: `v18.0.0` or later
-- **Discord User Token**: credential for an account with access to the source server and `Administrator` / `Manage Channels` / `Manage Roles` / `Manage Webhooks` on the target server.
-
-> ⚠️ **Account risk**: Discloner authenticates with a user token via `discord.js-selfbot-v13`. Automating a user account ("self-botting") is against Discord's Terms of Service and can get the account permanently disabled. Use a throwaway account on servers you own.
-
----
-
-## Installation & Setup
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/abdulrehman958280-max/cloner.git
-   cd cloner
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Start the application**:
-   ```bash
-   npm start
-   ```
-
-4. **Open in browser**:
-   Navigate to `http://localhost:3000`.
-
----
-
-## Running Automated Tests
-
-Run the built-in test suite:
-```bash
-npm test
-```
-
-The `tests/uiDom.test.js` suite asserts dashboard structure and client-side behaviour. It needs
-no new dependency by default and simply skips; install jsdom to enable it:
+## Quick start
 
 ```bash
-npm install --no-save jsdom && npm test
+git clone https://github.com/argamerzz9582-debug/Discloner.git
+cd Discloner
+npm install
+npm start
 ```
+
+Open <http://localhost:3000>.
+
+Requirements: **Node.js 20+** and a Discord account that can see the source server and administer the
+target server (`Manage Channels`, `Manage Roles`, `Manage Webhooks`, ideally `Administrator`).
+
+### Docker
+
+```bash
+docker compose up --build        # http://localhost:3000
+```
+
+Or without Compose:
+
+```bash
+docker build -t discloner:3.0.0 .
+docker run --rm -p 127.0.0.1:3000:3000 -v discloner-state:/data discloner:3.0.0
+```
+
+The image is multi-stage (no build tooling in the final layer), runs as an unprivileged user, is
+read-only with a `tmpfs` for `/tmp`, and ships a `HEALTHCHECK` wired to `/api/health`.
 
 ---
 
-## Configuration & Environment Variables
+## Configuration
 
-Copy `.env.example` to `.env` if you need non-default settings:
+Everything is optional; copy `.env.example` to `.env` to override.
 
-| Variable | Default | Description |
+| Variable | Default | Notes |
 | --- | --- | --- |
-| `PORT` | `3000` | HTTP port. Invalid values fall back to the default and are reported at boot. |
-| `HOST` | `0.0.0.0` | Bind address. Use `127.0.0.1` to restrict the dashboard to this machine. |
-| `ALLOWED_ORIGINS` | *unset* | Comma-separated Socket.IO origin allowlist. Unset means **same-origin only** (what the bundled dashboard needs). `*` is still accepted but logs an insecure-policy warning at boot. |
+| `PORT` | `3000` | HTTP port. |
+| `HOST` | `0.0.0.0` | Bind address. **Use `127.0.0.1`** unless behind a proxy. |
+| `ALLOWED_ORIGINS` | *unset* | Comma-separated CORS/Socket.IO allowlist. Unset = same-origin only. `*` is accepted but warned about. |
+| `MAX_CONCURRENT_JOBS` | `2` | 1–5. |
+| `MAX_QUEUED_JOBS` | `20` | 1–200. |
+| `MAX_MIRROR_SESSIONS` | `1` | 1–5. Each mirror holds a gateway connection. |
+| `PERSIST_JOBS` | `true` | Disable for fully ephemeral jobs (resume becomes unavailable). |
+| `JOB_STATE_DIR` | `.discloner/state` | Checkpoint directory. |
+| `STATE_RETENTION_DAYS` | `7` | 0–90. Older checkpoints are pruned on boot. |
+| `LOG_LEVEL` | `info` | `debug` · `info` · `warn` · `error` · `silent`. |
+| `LOG_FORMAT` | `pretty` (`json` in production) | Structured logging sink format. |
+| `FEATURE_CONTINUOUS_MIRROR` | `true` | Feature flag. |
+| `FEATURE_MULTI_JOB` | `true` | Feature flag. |
+| `FEATURE_RESUME` | `true` | Feature flag. |
+| `FEATURE_TELEMETRY` | `false` | Feature flag. |
+| `TELEMETRY_OPT_IN` | `false` | Must also be true for any remote send. |
+| `TELEMETRY_ENDPOINT` | *unset* | Collector URL. |
+| `SHUTDOWN_GRACE_MS` | `8000` | Grace period for Discord teardown. |
+| `NODE_ENV` | `development` | `production` enables strict config validation and JSON logs. |
 
-```env
-PORT=3000
-HOST=127.0.0.1
-# ALLOWED_ORIGINS=https://cloner.example.com
-```
-
-### Runtime guards
-
-| Guard | Default | Purpose |
-| --- | --- | --- |
-| `POST /api/jobs/start` | 5 / 60s per IP | Each start opens a Discord gateway session. Invalid payloads are rejected before consuming budget. |
-| `clone:preflight` | 12 / 60s per IP + 4s per socket | Preflight also authenticates, so double-clicks are debounced. |
-| `clone:start` | 3s per socket | Prevents retry storms after an instant failure. |
-| Job capability | per job | 24-byte random token required (alongside socket ownership) to cancel. |
-
-All guards are in-process and need no extra services. Statistics are surfaced (aggregate only, never secrets) at `GET /api/health`.
+Invalid values are clamped or rejected with an explicit message at boot. In production a bad value
+**fails the boot** instead of silently degrading.
 
 ---
 
 ## Architecture
 
 ```
-├── public/
-│   ├── index.html         # Modern responsive dashboard interface
-│   ├── theme-bootstrap.js # Pre-paint theme application (keeps CSP inline-free)
-│   ├── script.js          # Client-side Socket.IO & telemetry UI engine
-│   └── style.css          # Design system & responsive styles
+├── server.js                  # Express + Socket.IO entrypoint, REST + socket surface
 ├── services/
-│   ├── cloneService.js    # Multi-stage cloning pipeline & guild syncer
-│   ├── discordService.js  # Discord client lifecycle & session management
-│   ├── jobManager.js      # Background jobs, ownership capabilities, stale-job sweeper
-│   ├── preflightService.js# Credential/permission/resource preflight checks
-│   ├── httpGuard.js       # Rate limiting & per-socket cooldowns
-│   ├── configContract.js  # Single source of truth for defaults & limits
-│   └── validationService.js # Discord snowflake & payload validator
-├── utils/
-│   └── logger.js          # Structured logging & exact-value token redaction
-├── tests/
-│   ├── logger.test.js         # Sanitization & log formatting tests
-│   ├── loggerSecrets.test.js  # Exact-value credential redaction
-│   ├── httpGuard.test.js      # Rate limiter & cooldown behaviour
-│   ├── jobOwnership.test.js   # Job capability & cancellation authorization
-│   ├── uiDom.test.js          # Dashboard structure & behaviour (optional jsdom)
-│   └── validation.test.js     # Input validation & option clamp tests
-├── server.js              # Express HTTP & Socket.IO server entrypoint
-└── package.json
+│   ├── config.js              # Typed env parsing, validation, strict mode
+│   ├── featureFlags.js        # Runtime feature flags
+│   ├── jobManager.js          # Lifecycle, queue pump, checkpoints, ownership
+│   ├── jobQueue.js            # Priority queue, positions, ETA estimation
+│   ├── jobStore.js            # Atomic, credential-free persistence + retention
+│   ├── mirrorService.js       # Gateway adapter, echo protection, structure sync
+│   ├── cloneService.js        # The 16-stage cloning pipeline (resumable)
+│   ├── discordService.js      # Client creation, auth, teardown
+│   ├── preflightService.js    # Permission + resource checks before start
+│   ├── validationService.js   # Snowflake & payload validation, option clamping
+│   ├── httpGuard.js           # Rate limits and per-socket cooldowns
+│   ├── configContract.js      # Shared defaults, limits, APP_VERSION
+│   ├── telemetry.js           # Opt-in, allowlisted event counters
+│   └── reliability/           # Error taxonomy, backoff, retry, rate limiter
+├── utils/logger.js            # Structured logging + exact-value redaction
+├── public/
+│   ├── index.html             # Dashboard shell
+│   ├── theme-bootstrap.js     # Pre-paint theme (keeps CSP inline-free)
+│   ├── styles/                # tokens · base · components · panels · console · modals · responsive
+│   └── js/
+│       ├── main.js            # Boot + wiring
+│       ├── core/              # dom, store, i18n, format helpers
+│       ├── services/          # api, storage, JobClient (the only Socket.IO code)
+│       ├── managers/          # TokenManager, ServerSelector, ConfigPanel,
+│       │                      #   ProgressTracker, ActivityConsole, ThemeManager,
+│       │                      #   JobController (state machine), QueueView
+│       └── ui/                # toasts, guided tour
+├── tests/                     # node:test suites (unit + jsdom client tests)
+├── scripts/check-syntax.mjs   # `npm run lint`
+├── Dockerfile                 # Multi-stage production image
+└── docker-compose.yml         # Single-host deployment, hardened defaults
 ```
+
+### Client state machine
+
+```
+idle ──start──▶ preflight ──ok──▶ starting ──▶ queued ──▶ running
+                  │                                       │  ▲
+                  └──cancel──▶ idle         pause ────────┘  │
+                                             resume ─────────┘
+running ──▶ stopping ──▶ cancelled
+running ──▶ completed | failed ──resume──▶ running
+```
+
+Illegal transitions are ignored rather than thrown, so a duplicated or out-of-order socket frame can
+never corrupt the UI.
+
+### API surface
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | Liveness, version, queue depth, telemetry status (Docker healthcheck). |
+| `GET` | `/api/features` | Enabled feature flags. |
+| `POST` | `/api/jobs` | Start a job (`mode`, `userToken`, `sourceId`, `targetId`, `options`, `priority`). |
+| `GET` | `/api/jobs` · `/api/jobs/active` · `/api/jobs/:id` | List, find active, inspect one. |
+| `GET` | `/api/jobs/resumable` | Jobs with a usable checkpoint. |
+| `POST` | `/api/jobs/:id/cancel` · `/pause` · `/resume` | Job control (capability token required). |
+| `GET` | `/api/queue` | Queue snapshot with positions and ETA. |
+| `GET` | `/api/telemetry/status` | Local telemetry counters (never remote data). |
+
+Socket events: `job:subscribe`, `jobs:subscribe`, `job:query_active`, `clone:preflight`,
+`clone:start`, `clone:cancel`, `job:pause`, `job:resume`, `job:restart`, and the server-side
+`job:state`, `clone:stage`, `clone:progress`, `clone:log`, `job:checkpoint`, `mirror:stats`,
+`queue:state`, `system:shutdown`.
 
 ---
 
-## Security Considerations
+## Testing
 
-- **Discord Terms of Service**: Automating user accounts (self-bots) violates Discord's Terms of Service and may result in account termination. Always use test or developer accounts on servers you own or have explicit authorization to administer.
-- **Token Security**: Tokens are held in server memory for the duration of a job and are never persisted by the backend. The browser keeps them in memory by default; persistence is an explicit opt-in and stores the value unencrypted in `localStorage`. Browsers previously used by older builds are scrubbed automatically on first load unless you opt in.
-- **Deployment**: Run Discloner on a machine you control. Binding to `0.0.0.0` (the default) exposes an interface that accepts account credentials — set `HOST=127.0.0.1` or put it behind an authenticating reverse proxy if the host is reachable from an untrusted network.
-- **Logs**: Error messages are sanitized before they reach the browser, and unknown `/api` routes return JSON instead of stack traces.
+```bash
+npm test          # node:test — unit + jsdom client suites
+npm run lint      # node --check sweep across every JS file
+```
+
+Suites cover configuration parsing, queue ordering and ETA, checkpoint storage, mirror event
+forwarding, error classification, rate limiting, job ownership, the full clone pipeline and the whole
+client module graph (15 browser-behaviour tests in jsdom with a fake transport).
+
+`npm run test:watch` keeps the suite running while you work.
+
+---
+
+## Deployment notes
+
+- **Bind to loopback.** `HOST=127.0.0.1` plus a reverse proxy that terminates TLS and authenticates.
+- **One mirror per guild.** Each mirror session holds a gateway connection; `MAX_MIRROR_SESSIONS`
+  defaults to 1 to stay well inside Discord's limits.
+- **Checkpoints are state.** Mount `JOB_STATE_DIR` on a volume you back up — that is what makes resume
+  work across restarts. It contains no credentials, but it does contain server IDs.
+- **Logs are JSON in production.** Ship them to your aggregator; secrets are already redacted.
+- **Graceful shutdown.** `SIGTERM` cancels in-flight jobs, checkpoints them, and waits up to
+  `SHUTDOWN_GRACE_MS` before exiting. Docker's `stop_grace_period` is set to 20s to match.
+
+---
+
+## Documentation
+
+- [`CHANGELOG.md`](CHANGELOG.md) — version history and migration notes
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — dev setup, conventions, test expectations
+- [`SECURITY.md`](SECURITY.md) — threat model, disclosure policy, hardening checklist
+
+---
+
+## License
+
+MIT. See `LICENSE` if present in the repository, otherwise treat the above as the intended terms.
+
+**Discloner is not affiliated with, endorsed by, or supported by Discord Inc.** Use it only on servers
+you own or are explicitly authorised to administer.
