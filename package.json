@@ -1,6 +1,6 @@
 {
   "name": "discord-server-cloner",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Premium Discord Server Migration & Synchronization Studio",
   "main": "server.js",
   "type": "module",

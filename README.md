@@ -19,9 +19,17 @@ Discord Server Cloner allows administrators to clone Discord servers — synchro
 - **Granular Stage Telemetry**: Real-time progress bar with item counts, active stage pills, and live elapsed timer.
 - **Interactive Activity Console**:
   - Real-time structured log streaming (timestamps, status badges, contextual metadata).
-  - Client-side severity filters (`All`, `Info`, `Success`, `Warnings`, `Errors`).
+  - Client-side severity filters (`All`, `Info`, `Success`, `Warnings`, `Errors`) with **live per-severity counts**.
   - Search query filtering by channel, role name, or message.
+  - Explicit empty states that distinguish "nothing has happened yet" from "your filter hides everything".
   - One-click log export / clipboard copy and auto-scroll control.
+- **Interface & Accessibility**:
+  - **Stateful workflow stepper** — the Token → Source & Target → Clone tracker reflects real form state instead of being decorative.
+  - **Keyboard first**: `Ctrl`/`Cmd` + `Enter` starts a migration, `Esc` dismisses the top-most dialog, dialogs trap focus and restore it to the trigger, and a skip link jumps straight to the workspace.
+  - **Responsive action dock**: on tablet/mobile the primary CTA stays pinned within thumb reach, and the header navigation becomes a scrollable row instead of disappearing.
+  - **Theme that remembers**: the saved light/dark choice is honoured on reload, with the OS preference used on a first visit (applied before first paint, so there is no flash).
+  - **Motion with intent**: progress sheen, counter bumps and dialog entrances all collapse under `prefers-reduced-motion`.
+  - Tuned dark-mode text contrast (muted text now clears WCAG AA) and a single consistent `:focus-visible` ring.
 - **Security & Privacy**:
   - **Memory-only credentials by default**: the Discord token is never written to disk unless you explicitly flip *Remember token on this device* (off by default, with an inline warning).
   - **Exact-value + pattern token redaction**: any accepted credential is registered with the logger and scrubbed from every log line, error detail, and socket payload — even if it does not match Discord's usual token shape.
@@ -70,6 +78,13 @@ Discord Server Cloner allows administrators to clone Discord servers — synchro
 Run the built-in test suite:
 ```bash
 npm test
+```
+
+The `tests/uiDom.test.js` suite asserts dashboard structure and client-side behaviour. It needs
+no new dependency by default and simply skips; install jsdom to enable it:
+
+```bash
+npm install --no-save jsdom && npm test
 ```
 
 ---
@@ -126,6 +141,7 @@ All guards are in-process and need no extra services. Statistics are surfaced (a
 │   ├── loggerSecrets.test.js  # Exact-value credential redaction
 │   ├── httpGuard.test.js      # Rate limiter & cooldown behaviour
 │   ├── jobOwnership.test.js   # Job capability & cancellation authorization
+│   ├── uiDom.test.js          # Dashboard structure & behaviour (optional jsdom)
 │   └── validation.test.js     # Input validation & option clamp tests
 ├── server.js              # Express HTTP & Socket.IO server entrypoint
 └── package.json

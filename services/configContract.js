@@ -3,7 +3,7 @@
  * Single source of truth for Discloner (frontend, backend, validation, presets, tests)
  */
 
-export const APP_VERSION = '2.2.0';
+export const APP_VERSION = '2.3.0';
 
 export const DEFAULT_CONFIG = Object.freeze({
     // Core structural cloning

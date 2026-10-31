@@ -3387,3 +3387,430 @@ a {
     box-shadow: none;
     border-color: rgba(46, 84, 230, 0.25);
 }
+
+/* ==========================================================================
+   21. UI/UX REFINEMENT PASS
+   Additive layer: accessibility utilities, stateful stepper, sticky mobile CTA,
+   console feedback, and motion polish. All colours come from existing tokens.
+   ========================================================================== */
+
+/* ---- 21.1 Theme-aware additions ---------------------------------------- */
+:root,
+[data-theme="light"] {
+    --cta-dock-bg: rgba(234, 239, 245, 0.88);
+    --cta-dock-shadow: 0 -8px 28px rgba(130, 145, 170, 0.35);
+    --log-hover: rgba(37, 99, 235, 0.06);
+    --kbd-bg: #F6F9FC;
+    --kbd-border: rgba(130, 145, 170, 0.45);
+    /* Slightly darker than the base token to reach AA for small helper text */
+    --text-muted: #5F6875;
+}
+
+[data-theme="dark"] {
+    --cta-dock-bg: rgba(32, 36, 45, 0.9);
+    --cta-dock-shadow: 0 -8px 28px rgba(0, 0, 0, 0.6);
+    --log-hover: rgba(94, 119, 255, 0.12);
+    --kbd-bg: #171A21;
+    --kbd-border: rgba(255, 255, 255, 0.16);
+    /* Raised from #798699 (~4.0:1) to clear 4.5:1 on --surface */
+    --text-muted: #8B99AD;
+}
+
+/* ---- 21.2 Assistive utilities ------------------------------------------ */
+.sr-only {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.skip-link {
+    position: fixed;
+    top: 8px;
+    left: 50%;
+    transform: translate(-50%, -160%);
+    z-index: 3000;
+    padding: 10px 18px;
+    border-radius: var(--radius-full);
+    background: var(--primary-gradient);
+    color: var(--primary-text);
+    font-size: 12.5px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: var(--shadow-raised), 0 4px 16px var(--primary-glow);
+    transition: transform var(--transition-fast);
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+    transform: translate(-50%, 0);
+    outline: 3px solid var(--border-focus);
+    outline-offset: 2px;
+}
+
+/* Single, consistent keyboard focus ring. :where() keeps specificity at 0 so
+   component-level focus rules still win where they exist. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 3px solid var(--border-focus);
+    outline-offset: 2px;
+}
+
+#mainDashboard {
+    scroll-margin-top: 96px;
+}
+
+/* ---- 21.3 Header condense on scroll ------------------------------------ */
+.app-header {
+    transition: background-color var(--transition-smooth), box-shadow var(--transition-smooth), top var(--transition-smooth);
+}
+
+.app-header.is-condensed {
+    top: 6px;
+    box-shadow: var(--shadow-raised), 0 10px 30px rgba(17, 19, 24, 0.16);
+}
+
+.app-header.is-condensed .header-inner {
+    min-height: 54px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+/* ---- 21.4 Stateful workflow stepper ------------------------------------ */
+.step-chip {
+    transition: color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.step-chip.done {
+    color: var(--text-secondary);
+}
+
+.step-chip.done .step-chip-num {
+    background: var(--success-bg);
+    color: var(--success);
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.step-chip[aria-current="step"] .step-chip-num {
+    background: var(--primary-gradient);
+    color: #FFFFFF;
+    border-color: transparent;
+    box-shadow: 0 2px 6px rgba(46, 84, 230, 0.35);
+}
+
+.step-chip[aria-current="step"] .step-chip-text {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* ---- 21.5 CTA keyboard hint -------------------------------------------- */
+.cta-kbd-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin: 0;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.cta-kbd-hint kbd {
+    display: inline-block;
+    min-width: 18px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: var(--kbd-bg);
+    border: 1px solid var(--kbd-border);
+    box-shadow: 0 1px 0 var(--kbd-border);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.cta-kbd-sep {
+    margin: 0 4px;
+    opacity: 0.6;
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .cta-kbd-hint { display: none; }
+}
+
+/* ---- 21.6 Filter chips with live counts -------------------------------- */
+.filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filter-count {
+    min-width: 16px;
+    padding: 0 5px;
+    border-radius: var(--radius-full);
+    background-color: var(--surface-inset);
+    box-shadow: var(--shadow-inset);
+    font-size: 9.5px;
+    font-weight: 700;
+    line-height: 15px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.filter-pill.active .filter-count {
+    background-color: rgba(255, 255, 255, 0.22);
+    box-shadow: none;
+    color: #FFFFFF;
+}
+
+.filter-pill[data-filter="warning"]:not(.active) .filter-count.is-nonzero {
+    background-color: var(--warning-bg);
+    color: var(--warning);
+    box-shadow: none;
+}
+
+.filter-pill[data-filter="error"]:not(.active) .filter-count.is-nonzero {
+    background-color: var(--danger-bg);
+    color: var(--danger);
+    box-shadow: none;
+}
+
+/* ---- 21.7 Console empty state ------------------------------------------ */
+.log-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 36px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    animation: emptyStateIn 0.24s ease;
+}
+
+@keyframes emptyStateIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.log-empty-state svg {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 4px;
+    opacity: 0.55;
+}
+
+.log-empty-title {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.log-empty-desc {
+    margin: 0;
+    font-size: 11.5px;
+    max-width: 30ch;
+    line-height: 1.4;
+}
+
+/* ---- 21.8 Log row affordance ------------------------------------------- */
+.log-entry {
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin: 0 -4px;
+    transition: background-color var(--transition-fast);
+}
+
+.log-entry:hover {
+    background-color: var(--log-hover);
+}
+
+/* ---- 21.9 Live progress polish ----------------------------------------- */
+.neu-progress-fill {
+    position: relative;
+    overflow: hidden;
+}
+
+#progressCard.is-running .neu-progress-fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 10%, rgba(255, 255, 255, 0.42) 50%, transparent 90%);
+    transform: translateX(-100%);
+    animation: progressSheen 1.9s ease-in-out infinite;
+}
+
+@keyframes progressSheen {
+    to { transform: translateX(100%); }
+}
+
+#progressCard.is-running .stage-dot.pulsing {
+    box-shadow: 0 0 0 0 var(--accent-glow);
+    animation: stagePulse 1.6s ease-out infinite;
+}
+
+@keyframes stagePulse {
+    0% { box-shadow: 0 0 0 0 var(--accent-glow); }
+    70% { box-shadow: 0 0 0 7px rgba(59, 130, 246, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+/* ---- 21.10 Stat counter feedback -------------------------------------- */
+.stat-pill-val {
+    transition: color var(--transition-fast);
+}
+
+.stat-pill-val.bumped {
+    animation: statBump 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes statBump {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.16); color: var(--accent); }
+    100% { transform: scale(1); }
+}
+
+/* ---- 21.11 Sticky action dock on tablet/mobile ------------------------- */
+@media (max-width: 1023px) {
+    .cta-actions-group {
+        position: sticky;
+        bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+        z-index: 45;
+        padding: 10px;
+        margin-top: 4px;
+        border-radius: var(--radius-lg);
+        background: var(--cta-dock-bg);
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
+        box-shadow: var(--cta-dock-shadow), var(--shadow-raised-sm);
+        border-top: var(--bevel-top);
+        border-bottom: var(--bevel-bottom);
+    }
+
+    .cta-actions-group .cta-kbd-hint {
+        display: none;
+    }
+}
+
+@media (max-width: 767px) {
+    .neu-terminal-container {
+        height: 280px;
+    }
+
+    .filter-chips-scroll {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ---- 21.12 Modal interaction affordances ------------------------------- */
+.neu-modal-card {
+    animation: modalRise 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes modalRise {
+    from { opacity: 0; transform: translateY(10px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .neu-modal-card,
+    .log-empty-state,
+    .stat-pill-val.bumped,
+    #progressCard.is-running .neu-progress-fill::after,
+    #progressCard.is-running .stage-dot.pulsing {
+        animation: none !important;
+    }
+}
+
+/* ---- 21.13 Toast refinements ------------------------------------------- */
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.toast-text {
+    flex: 1 1 auto;
+    line-height: 1.35;
+}
+
+.toast-dismiss {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    margin: -2px -4px -2px 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    opacity: 0.55;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: opacity var(--transition-fast), background-color var(--transition-fast);
+}
+
+.toast-dismiss:hover,
+.toast-dismiss:focus-visible {
+    opacity: 1;
+    background-color: rgba(127, 127, 127, 0.18);
+}
+
+.toast-leaving {
+    opacity: 0 !important;
+    transform: translateY(-8px) !important;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* ---- 21.14 Mobile navigation access -------------------------------------
+   The header nav used to disappear below 768px, taking Tour / Presets /
+   Guides / About with it. It now wraps onto its own scrollable row.
+   ------------------------------------------------------------------------ */
+@media (max-width: 767px) {
+    .app-header .header-inner {
+        flex-wrap: wrap;
+    }
+
+    .app-header .desktop-nav {
+        display: flex;
+        order: 3;
+        width: 100%;
+        max-width: 100%;
+        margin-top: 2px;
+        padding: 4px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+        justify-content: flex-start;
+    }
+
+    .app-header .desktop-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .app-header .desktop-nav .nav-link,
+    .app-header .desktop-nav .nav-link-btn {
+        flex: 0 0 auto;
+        min-height: 32px;
+        padding: 5px 11px;
+        font-size: 12px;
+    }
+
+    .header-actions {
+        margin-left: auto;
+    }
+}

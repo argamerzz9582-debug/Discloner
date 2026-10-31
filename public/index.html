@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <a class="skip-link" href="#mainDashboard">Skip to migration setup</a>
     <div class="app-wrapper" id="appRoot">
         
         <!-- Header -->
@@ -95,17 +96,17 @@
 
                 <!-- Clean Workflow Stepper -->
                 <div class="workflow-stepper" aria-label="Migration Workflow">
-                    <div class="step-chip active">
+                    <div class="step-chip" id="stepToken" data-step="1">
                         <span class="step-chip-num">1</span>
                         <span class="step-chip-text">Token</span>
                     </div>
                     <span class="step-divider" aria-hidden="true">→</span>
-                    <div class="step-chip active">
+                    <div class="step-chip" id="stepRoute" data-step="2">
                         <span class="step-chip-num">2</span>
                         <span class="step-chip-text">Source & Target</span>
                     </div>
                     <span class="step-divider" aria-hidden="true">→</span>
-                    <div class="step-chip active">
+                    <div class="step-chip" id="stepClone" data-step="3">
                         <span class="step-chip-num">3</span>
                         <span class="step-chip-text">Clone</span>
                     </div>
@@ -114,7 +115,7 @@
         </section>
 
         <!-- Main Dashboard Workspace -->
-        <main class="dashboard-grid" id="mainDashboard">
+        <main class="dashboard-grid" id="mainDashboard" tabindex="-1">
             
             <!-- Left Column: Streamlined Migration Card with Advanced Settings Drawer -->
             <section class="workspace-col config-column" aria-label="Migration Setup">
@@ -150,6 +151,10 @@
                                         placeholder="Paste Discord user token" 
                                         required 
                                         autocomplete="new-password"
+                                        spellcheck="false"
+                                        autocapitalize="off"
+                                        autocorrect="off"
+                                        aria-describedby="tokenHelper"
                                         class="neu-input font-mono"
                                     >
                                     <div class="input-actions">
@@ -167,8 +172,8 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="field-helper security-badge">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="helper-icon">
+                                <div class="field-helper security-badge" id="tokenHelper">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="helper-icon" aria-hidden="true">
                                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                                     </svg>
                                     <span>Token stays in memory only. It is never written to browser storage unless you opt in below.</span>
@@ -206,6 +211,9 @@
                                             required 
                                             maxlength="22"
                                             inputmode="numeric"
+                                            spellcheck="false"
+                                            autocapitalize="off"
+                                            autocorrect="off"
                                             class="neu-input font-mono"
                                         >
                                     </div>
@@ -242,6 +250,9 @@
                                             required 
                                             maxlength="22"
                                             inputmode="numeric"
+                                            spellcheck="false"
+                                            autocapitalize="off"
+                                            autocorrect="off"
                                             class="neu-input font-mono"
                                         >
                                     </div>
@@ -450,6 +461,7 @@
                                                         </div>
                                                     </div>
                                                 </div>
+                                            </div>
                                             <!-- Configuration Action Toolbar (Save / Reset preferences) -->
                                             <div class="config-actions-bar" id="configActionsBar">
                                                 <div class="config-btns-group">
@@ -494,6 +506,11 @@
                                 </svg>
                             </span>
                         </button>
+                        <p class="cta-kbd-hint">
+                            <kbd>Ctrl</kbd><span aria-hidden="true">+</span><kbd>Enter</kbd> to start
+                            <span class="cta-kbd-sep" aria-hidden="true">·</span>
+                            <kbd>Esc</kbd> to close dialogs
+                        </p>
                         <button type="button" id="cancelBtn" class="neu-btn-danger hidden">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-cancel-icon">
                                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -548,7 +565,7 @@
                                 <span class="progress-title">Overall Progress</span>
                                 <span class="progress-percent font-mono" id="progressText">0%</span>
                             </div>
-                            <div class="neu-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0" id="progressTrack">
+                            <div class="neu-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Not started" aria-label="Migration progress" id="progressTrack">
                                 <div class="neu-progress-fill" id="progressBar"></div>
                             </div>
                             <div class="progress-sub-row">
@@ -592,12 +609,12 @@
 
                         <!-- Toolbar: Filters & Actions -->
                         <div class="console-toolbar">
-                            <div class="filter-chips-scroll" role="tablist" aria-label="Log severity filter">
-                                <button type="button" class="filter-pill active" data-filter="all">All</button>
-                                <button type="button" class="filter-pill" data-filter="info">Info</button>
-                                <button type="button" class="filter-pill" data-filter="success">Success</button>
-                                <button type="button" class="filter-pill" data-filter="warning">Warnings</button>
-                                <button type="button" class="filter-pill" data-filter="error">Errors</button>
+                            <div class="filter-chips-scroll" role="group" aria-label="Log severity filter">
+                                <button type="button" class="filter-pill active" data-filter="all" aria-pressed="true">All <span class="filter-count font-mono" data-count="all">0</span></button>
+                                <button type="button" class="filter-pill" data-filter="info" aria-pressed="false">Info <span class="filter-count font-mono" data-count="info">0</span></button>
+                                <button type="button" class="filter-pill" data-filter="success" aria-pressed="false">Success <span class="filter-count font-mono" data-count="success">0</span></button>
+                                <button type="button" class="filter-pill" data-filter="warning" aria-pressed="false">Warnings <span class="filter-count font-mono" data-count="warning">0</span></button>
+                                <button type="button" class="filter-pill" data-filter="error" aria-pressed="false">Errors <span class="filter-count font-mono" data-count="error">0</span></button>
                             </div>
 
                             <div class="console-actions-group">
@@ -626,7 +643,7 @@
 
                     <!-- Inset Neumorphic Terminal Log Stream -->
                     <div class="neu-terminal-container" id="terminal">
-                        <div class="log-stream" id="logStream" role="log" aria-live="polite">
+                        <div class="log-stream" id="logStream" role="log" aria-live="off" aria-relevant="additions">
                             <div class="log-entry log-entry-info">
                                 <span class="log-time font-mono">00:00:00</span>
                                 <span class="log-icon-type">→</span>
@@ -634,7 +651,19 @@
                             </div>
                         </div>
 
+                        <!-- Filtered-empty state -->
+                        <div class="log-empty-state hidden" id="logEmptyState">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            <p class="log-empty-title" id="logEmptyTitle">No matching activity</p>
+                            <p class="log-empty-desc" id="logEmptyDesc">Adjust the severity filter or clear the search to see entries.</p>
+                        </div>
+
                         <!-- Floating Jump to Latest Button -->
+                        <div class="sr-only" id="logAnnouncer" role="status" aria-live="polite" aria-atomic="true"></div>
+
                         <button type="button" class="jump-latest-pill hidden" id="jumpLatestBtn">
                             <span>↓ New activity received</span>
                         </button>
@@ -863,7 +892,7 @@
                 <div class="support-info-box">
                     <div class="support-info-row">
                         <span class="support-info-label">Version:</span>
-                        <span class="support-info-val font-mono">v2.2.0 (Hardened)</span>
+                        <span class="support-info-val font-mono">v2.3.0 (Refined)</span>
                     </div>
                     <div class="support-info-row">
                         <span class="support-info-label">Theme Engine:</span>
@@ -916,7 +945,7 @@
     </div>
 
     <!-- Toast Notification Container -->
-    <div class="toast-container" id="toastContainer" aria-live="assertive"></div>
+    <div class="toast-container" id="toastContainer" role="status" aria-live="polite" aria-relevant="additions"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
