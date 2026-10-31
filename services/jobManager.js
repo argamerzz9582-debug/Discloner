@@ -4,6 +4,7 @@
  * global active job limits, stale job heartbeat monitoring, and safe telemetry broadcast.
  */
 
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { executeClone } from './cloneService.js';
 import { createLogEntry, sanitizeText } from '../utils/logger.js';
 import {
@@ -60,6 +61,21 @@ class JobManager {
     }
 
     /**
+     * Constant-time comparison for job capabilities.
+     */
+    _tokensMatch(expected, provided) {
+        if (typeof expected !== 'string' || typeof provided !== 'string') return false;
+        const a = Buffer.from(expected);
+        const b = Buffer.from(provided);
+        if (a.length !== b.length) return false;
+        try {
+            return timingSafeEqual(a, b);
+        } catch {
+            return false;
+        }
+    }
+
+    /**
      * Creates and starts a detached background migration job with concurrency guards
      */
     startJob({ userToken, sourceId, targetId, options, socketId = null, executor = executeClone }) {
@@ -83,6 +99,9 @@ class JobManager {
 
         const job = {
             id: jobId,
+            // Capability secret: only the caller that started the job (or the
+            // socket that owns it) may cancel it. Never exposed in snapshots.
+            jobToken: randomBytes(24).toString('hex'),
             socketId,
             status: 'running', // 'running' | 'completed' | 'failed' | 'cancelled'
             sourceId,
@@ -272,11 +291,25 @@ class JobManager {
     }
 
     /**
-     * Request cancellation of a job
+     * Reports whether a caller is allowed to act on a job.
+     * Jobs started over REST (no socketId) are addressable by job token only.
      */
-    cancelJob(jobId) {
+    canControlJob(jobId, { socketId = null, jobToken = null } = {}) {
         const job = this.jobs.get(jobId);
         if (!job) return false;
+        if (job.socketId && socketId && job.socketId === socketId) return true;
+        if (jobToken && this._tokensMatch(job.jobToken, jobToken)) return true;
+        return false;
+    }
+
+    /**
+     * Request cancellation of a job.
+     * Callers must prove ownership via the originating socket or the job token.
+     */
+    cancelJob(jobId, { socketId = null, jobToken = null } = {}) {
+        const job = this.jobs.get(jobId);
+        if (!job) return false;
+        if (!this.canControlJob(jobId, { socketId, jobToken })) return false;
         if (job.status === 'running') {
             job.isCancelled = true;
             job.lastActivityAt = Date.now();
@@ -300,6 +333,9 @@ class JobManager {
             if (job.status === 'running' && (now - job.lastActivityAt) > this.STALE_JOB_TIMEOUT_MS) {
                 job.status = 'failed';
                 job.completedAt = now;
+                // Signal cooperative cancellation so the executor stops at its
+                // next checkpoint instead of holding a Discord session open.
+                job.isCancelled = true;
                 job.error = 'Job timed out due to prolonged gateway inactivity.';
                 job.stage = { stage: 'failed', label: 'Stale Timeout', progress: job.stage?.progress || 0 };
 
@@ -368,6 +404,47 @@ class JobManager {
 
         const target = runningJob || latestJob;
         return target ? this.getJobSnapshot(target.id) : null;
+    }
+
+    /**
+     * Requests cancellation of every running job (used by graceful shutdown and tests).
+     * @returns {number} number of jobs signalled
+     */
+    cancelAllRunning() {
+        let signalled = 0;
+        for (const job of this.jobs.values()) {
+            if (job.status === 'running') {
+                job.isCancelled = true;
+                job.lastActivityAt = Date.now();
+                signalled++;
+            }
+        }
+        return signalled;
+    }
+
+    /**
+     * Resolves when every currently running job has settled (or rejects never:
+     * job failures are captured internally).
+     */
+    waitForIdle() {
+        const pending = [];
+        for (const job of this.jobs.values()) {
+            if (job.status === 'running' && job._promise) {
+                pending.push(job._promise.catch(() => {}));
+            }
+        }
+        return Promise.all(pending);
+    }
+
+    /**
+     * Stops background timers so the process can exit cleanly.
+     */
+    shutdown() {
+        if (this._staleSweeperInterval) {
+            clearInterval(this._staleSweeperInterval);
+            this._staleSweeperInterval = null;
+        }
+        this.cancelAllRunning();
     }
 
     /**

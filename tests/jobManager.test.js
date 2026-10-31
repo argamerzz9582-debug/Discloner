@@ -53,7 +53,11 @@ test('jobManager cancels active job properly', async () => {
     });
 
     assert.equal(job.status, 'running');
-    const cancelled = jobManager.cancelJob(job.id);
+
+    // Cancellation requires proof of ownership (job capability token here).
+    assert.equal(jobManager.cancelJob(job.id), false, 'anonymous cancel must be refused');
+
+    const cancelled = jobManager.cancelJob(job.id, { jobToken: job.jobToken });
     assert.equal(cancelled, true);
 
     await job._promise;
