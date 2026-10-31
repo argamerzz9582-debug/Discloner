@@ -96,6 +96,18 @@
     const tourNextBtnText = document.getElementById('tourNextBtnText');
 
     // Live Stats
+    // UI/UX refinement refs
+    const mainHeader = document.getElementById('mainHeader');
+    const mainDashboard = document.getElementById('mainDashboard');
+    const progressCard = document.getElementById('progressCard');
+    const stepToken = document.getElementById('stepToken');
+    const stepRoute = document.getElementById('stepRoute');
+    const stepClone = document.getElementById('stepClone');
+    const logEmptyState = document.getElementById('logEmptyState');
+    const logEmptyTitle = document.getElementById('logEmptyTitle');
+    const logEmptyDesc = document.getElementById('logEmptyDesc');
+    const logAnnouncer = document.getElementById('logAnnouncer');
+
     const liveStatRoles = document.getElementById('liveStatRoles');
     const liveStatChannels = document.getElementById('liveStatChannels');
     const liveStatMessages = document.getElementById('liveStatMessages');
@@ -125,6 +137,7 @@
     const proceedConfirmBtn = document.getElementById('proceedConfirmBtn');
     const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
 
+    const confirmModal = document.getElementById('confirmModal');
     const summaryModal = document.getElementById('summaryModal');
     const statDuration = document.getElementById('statDuration');
     const statRoles = document.getElementById('statRoles');
@@ -161,6 +174,8 @@
     let currentJobId = null;
     // Capability issued by the server at job start; required to cancel.
     let currentJobToken = null;
+    // True while a preflight request is in flight (guards dialog dismissal).
+    let isPreflightRunning = false;
     const MAX_DOM_LOGS = 600;
 
     let statCounters = {
@@ -181,12 +196,24 @@
     // 1. Theme Engine & Persistence
     // ==========================================================================
 
-    function initTheme() {
-        // Enforce light theme immediately
+    function getPreferredTheme() {
+        // 1. Honour an explicit choice. 2. Otherwise follow the OS preference.
         try {
-            localStorage.setItem('discloner-theme', 'light');
+            const saved = localStorage.getItem('discloner-theme');
+            if (saved === 'dark' || saved === 'light') return saved;
         } catch (e) {}
-        applyTheme('light');
+
+        try {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                return 'dark';
+            }
+        } catch (e) {}
+
+        return 'light';
+    }
+
+    function initTheme() {
+        applyTheme(getPreferredTheme());
     }
 
     function applyTheme(theme) {
@@ -220,17 +247,122 @@
     // 2. Modals & Preset Handlers
     // ==========================================================================
 
+    // ==========================================================================
+    // Modal controller: focus trap, Esc to dismiss, focus restoration.
+    // ==========================================================================
+    const FOCUSABLE_SELECTOR = [
+        'a[href]',
+        'button:not([disabled])',
+        'input:not([disabled]):not([type="hidden"])',
+        'select:not([disabled])',
+        'textarea:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])'
+    ].join(', ');
+
+    const modalStack = [];
+
+    function getFocusable(modal) {
+        return Array.from(modal.querySelectorAll(FOCUSABLE_SELECTOR))
+            .filter(el => !el.hasAttribute('disabled')
+                && el.getAttribute('aria-hidden') !== 'true'
+                && !el.closest('.hidden, [hidden]'));
+    }
+
+    function syncModalScrollLock() {
+        document.body.style.overflow = modalStack.length > 0 ? 'hidden' : '';
+    }
+
     function openModal(modal) {
-        if (!modal) return;
+        if (!modal || modalStack.includes(modal)) return;
+
+        modalStack.push(modal);
+        modal.__returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
         modal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
+        syncModalScrollLock();
+
+        // Move focus into the dialog so screen readers and keyboards land inside.
+        // Done synchronously: the element is already painted once `hidden` is
+        // removed, and a deferred focus can race with an immediate Esc.
+        const target = getFocusable(modal)[0] || modal.querySelector('.neu-modal-card') || modal;
+        if (target === modal) modal.setAttribute('tabindex', '-1');
+        try {
+            target.focus({ preventScroll: true });
+        } catch (e) {}
     }
 
     function closeModal(modal) {
         if (!modal) return;
+
+        const index = modalStack.indexOf(modal);
+        if (index !== -1) modalStack.splice(index, 1);
+
         modal.classList.add('hidden');
-        document.body.style.overflow = '';
+        syncModalScrollLock();
+
+        // Return focus to whatever opened the dialog.
+        const returnTo = modal.__returnFocus;
+        modal.__returnFocus = null;
+        if (returnTo && document.body.contains(returnTo)) {
+            try {
+                returnTo.focus({ preventScroll: true });
+            } catch (e) {}
+        }
     }
+
+    function closeTopModal() {
+        if (modalStack.length === 0) return false;
+        closeModal(modalStack[modalStack.length - 1]);
+        return true;
+    }
+
+    // Esc dismisses the top-most dialog; Tab is trapped inside it.
+    document.addEventListener('keydown', (event) => {
+        if (modalStack.length === 0) return;
+        const topModal = modalStack[modalStack.length - 1];
+
+        if (event.key === 'Escape') {
+            // Never dismiss the confirmation dialog mid-preflight; the request
+            // is still in flight and the buttons would disappear under the user.
+            if (topModal === confirmModal && isPreflightRunning) return;
+            event.preventDefault();
+            closeModal(topModal);
+            return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        const focusable = getFocusable(topModal);
+        if (focusable.length === 0) {
+            event.preventDefault();
+            return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement;
+
+        if (!topModal.contains(active)) {
+            event.preventDefault();
+            first.focus();
+            return;
+        }
+        if (event.shiftKey && active === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+
+    // Clicking the dimmed backdrop dismisses dismissible dialogs.
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+        backdrop.addEventListener('click', (event) => {
+            if (event.target !== backdrop) return;
+            if (backdrop === confirmModal && isPreflightRunning) return;
+            closeModal(backdrop);
+        });
+    });
 
     if (navGuidesBtn) navGuidesBtn.addEventListener('click', () => openModal(helpModal));
     if (closeHelpBtn) closeHelpBtn.addEventListener('click', () => closeModal(helpModal));
@@ -289,27 +421,6 @@
             showToast('Applied preset: Roles & Permissions Only', 'info');
         }
     }
-
-    // Global Modal Escape and Backdrop Handlers
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeModal(confirmModal);
-            closeModal(summaryModal);
-            closeModal(helpModal);
-            closeModal(templatesModal);
-            closeModal(supportModal);
-        }
-    });
-
-    [confirmModal, summaryModal, helpModal, templatesModal, supportModal].forEach(modal => {
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    closeModal(modal);
-                }
-            });
-        }
-    });
 
     // ==========================================================================
     // 3. Form Interactions, Snowflake Validation & Dependency Sync
@@ -1145,6 +1256,7 @@
             proceedConfirmBtn.textContent = 'Verifying...';
         }
 
+        isPreflightRunning = true;
         openModal(confirmModal);
 
         // Run Preflight Check
@@ -1153,6 +1265,7 @@
     });
 
     socket.on('clone:preflight_result', (report) => {
+        isPreflightRunning = false;
         if (!preflightChecksList || !preflightStatusBadge || !proceedConfirmBtn) return;
 
         if (report.sourceGuildName) {
@@ -1247,6 +1360,9 @@
             
             telemetryEmptyState.classList.add('hidden');
             telemetryActiveView.classList.remove('hidden');
+
+            if (progressCard) progressCard.classList.add('is-running');
+            if (form) form.setAttribute('aria-busy', 'true');
             
             setFormDisabled(true);
 
@@ -1258,10 +1374,15 @@
             updateElapsedTimer();
 
             if (stageDot) stageDot.classList.add('pulsing');
+            updateWorkflowStepper();
         } else {
             startBtn.classList.remove('hidden');
             cancelBtn.classList.add('hidden');
             setFormDisabled(false);
+
+            if (progressCard) progressCard.classList.remove('is-running');
+            if (form) form.removeAttribute('aria-busy');
+            updateWorkflowStepper();
 
             if (timerInterval) {
                 clearInterval(timerInterval);
@@ -1270,6 +1391,56 @@
             if (stageDot) stageDot.classList.remove('pulsing');
         }
     }
+
+    // ==========================================================================
+    // Workflow stepper: mirrors real form state instead of being decorative.
+    // ==========================================================================
+    const SNOWFLAKE_PATTERN = /^[0-9]{17,20}$/;
+
+    function updateWorkflowStepper() {
+        if (!stepToken && !stepRoute && !stepClone) return;
+
+        const tokenReady = Boolean(userTokenInput && userTokenInput.value.trim().length >= 20);
+        const sourceValue = sourceIdInput ? sourceIdInput.value.trim() : '';
+        const targetValue = targetIdInput ? targetIdInput.value.trim() : '';
+        const routeReady = SNOWFLAKE_PATTERN.test(sourceValue)
+            && SNOWFLAKE_PATTERN.test(targetValue)
+            && sourceValue !== targetValue;
+
+        let currentIndex = 0;              // 0 = token, 1 = route, 2 = clone
+        if (tokenReady) currentIndex = 1;
+        if (tokenReady && routeReady) currentIndex = 2;
+        if (isRunning) currentIndex = 2;
+
+        const steps = [stepToken, stepRoute, stepClone];
+        const completed = [
+            tokenReady || isRunning,
+            (tokenReady && routeReady) || isRunning,
+            false // step 3 completes only when the job itself finishes
+        ];
+
+        steps.forEach((step, index) => {
+            if (!step) return;
+            const isCurrent = index === currentIndex;
+            const isDone = completed[index] && !isCurrent;
+
+            step.classList.toggle('done', isDone);
+            step.classList.toggle('active', isCurrent);
+            if (isCurrent) {
+                step.setAttribute('aria-current', 'step');
+            } else {
+                step.removeAttribute('aria-current');
+            }
+        });
+    }
+
+    [userTokenInput, sourceIdInput, targetIdInput].forEach(input => {
+        if (!input) return;
+        input.addEventListener('input', updateWorkflowStepper);
+        input.addEventListener('change', updateWorkflowStepper);
+    });
+
+    updateWorkflowStepper();
 
     function setFormDisabled(disabled) {
         userTokenInput.disabled = disabled;
@@ -1448,11 +1619,25 @@
         tickEtaTimer();
     }
 
+    function setStatValue(el, value) {
+        if (!el) return;
+        const next = String(value);
+        if (el.textContent === next) return;
+
+        el.textContent = next;
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        // Restart the bump animation on every change.
+        el.classList.remove('bumped');
+        void el.offsetWidth;
+        el.classList.add('bumped');
+    }
+
     function updateLiveStatCounts() {
-        if (liveStatRoles) liveStatRoles.textContent = statCounters.roles;
-        if (liveStatChannels) liveStatChannels.textContent = statCounters.channels;
-        if (liveStatMessages) liveStatMessages.textContent = (cloneMessagesCheckbox && cloneMessagesCheckbox.checked) ? statCounters.messages : '0';
-        if (liveStatWarnings) liveStatWarnings.textContent = statCounters.warnings;
+        setStatValue(liveStatRoles, statCounters.roles);
+        setStatValue(liveStatChannels, statCounters.channels);
+        setStatValue(liveStatMessages, (cloneMessagesCheckbox && cloneMessagesCheckbox.checked) ? statCounters.messages : 0);
+        setStatValue(liveStatWarnings, statCounters.warnings);
     }
 
     // ==========================================================================
@@ -1506,7 +1691,10 @@
                 const percent = Math.min(100, Math.max(0, Math.round(job.progress.progress || 0)));
                 if (progressBar) progressBar.style.width = `${percent}%`;
                 if (progressText) progressText.textContent = `${percent}%`;
-                if (progressTrack) progressTrack.setAttribute('aria-valuenow', percent);
+                if (progressTrack) {
+                    progressTrack.setAttribute('aria-valuenow', percent);
+                    progressTrack.setAttribute('aria-valuetext', `${percent}%${job.progress.item ? ` — ${job.progress.item}` : ''}`);
+                }
                 if (progressItemDetail && job.progress.item) progressItemDetail.textContent = job.progress.item;
                 if (progressCounts && job.progress.current !== undefined && job.progress.total !== undefined) {
                     progressCounts.textContent = `${job.progress.current} / ${job.progress.total}`;
@@ -1665,10 +1853,23 @@
         resetEtaCalculation();
     });
 
+    // Stage transitions are announced through a dedicated polite region; the
+    // log stream itself is too chatty to expose to screen readers.
+    let lastStageAnnounceAt = 0;
+    function announceStage(label, progress) {
+        if (!logAnnouncer) return;
+        const now = Date.now();
+        if (now - lastStageAnnounceAt < 2500) return;
+        lastStageAnnounceAt = now;
+        const pct = typeof progress === 'number' ? `, ${Math.round(progress)}%` : '';
+        logAnnouncer.textContent = `Migration stage: ${label}${pct}`;
+    }
+
     socket.on('clone:stage', (data) => {
         const stageName = data.label || data.stage || 'Processing...';
         if (stageLabel) stageLabel.textContent = stageName;
         appendLog('stage', `Stage: ${stageName}`, 'STAGE');
+        announceStage(stageName, data.progress);
     });
 
     socket.on('clone:progress', (data) => {
@@ -1676,7 +1877,10 @@
         const percent = Math.min(100, Math.max(0, Math.round(rawPercent)));
         if (progressBar) progressBar.style.width = `${percent}%`;
         if (progressText) progressText.textContent = `${percent}%`;
-        if (progressTrack) progressTrack.setAttribute('aria-valuenow', percent);
+        if (progressTrack) {
+            progressTrack.setAttribute('aria-valuenow', percent);
+            progressTrack.setAttribute('aria-valuetext', `${percent}%${data.item ? ` — ${data.item}` : ''}`);
+        }
 
         if (data.item && progressItemDetail) {
             progressItemDetail.textContent = data.item;
@@ -1809,6 +2013,7 @@
 
         if (matchesCurrentFilterAndSearch(logObj)) {
             renderLogItem(logObj);
+            updateConsoleEmptyState(1);
             handleAutoScroll();
         }
     }
@@ -1869,6 +2074,7 @@
         allLogs = [];
         logStream.innerHTML = '';
         updateLogCountBadge();
+        updateConsoleEmptyState(0);
         if (jumpLatestBtn) jumpLatestBtn.classList.add('hidden');
     }
 
@@ -1896,12 +2102,51 @@
         if (logCountPill) {
             logCountPill.textContent = `${allLogs.length} entries`;
         }
+
+        // Live per-severity totals on the filter chips.
+        const counts = { all: allLogs.length, info: 0, success: 0, warning: 0, error: 0 };
+        for (const log of allLogs) {
+            if (Object.prototype.hasOwnProperty.call(counts, log.level) && log.level !== 'all') {
+                counts[log.level] += 1;
+            }
+        }
+
+        document.querySelectorAll('.filter-count').forEach(el => {
+            const key = el.dataset.count;
+            const value = counts[key] ?? 0;
+            const text = String(value);
+            if (el.textContent !== text) el.textContent = text;
+            el.classList.toggle('is-nonzero', value > 0);
+        });
+    }
+
+    function updateConsoleEmptyState(visibleCount) {
+        if (!logEmptyState) return;
+
+        const show = visibleCount === 0;
+        logEmptyState.classList.toggle('hidden', !show);
+        if (!show) return;
+
+        // Distinguish "nothing has happened yet" from "your filter hides everything".
+        const nothingLogged = allLogs.length === 0;
+        if (logEmptyTitle) {
+            logEmptyTitle.textContent = nothingLogged ? 'No activity yet' : 'No matching activity';
+        }
+        if (logEmptyDesc) {
+            logEmptyDesc.textContent = nothingLogged
+                ? 'Log output will stream here once a migration starts.'
+                : 'Adjust the severity filter or clear the search to see entries.';
+        }
     }
 
     // Filter Chips
     filterPills.forEach(pill => {
         pill.addEventListener('click', () => {
-            filterPills.forEach(p => p.classList.remove('active'));
+            filterPills.forEach(p => {
+                p.classList.remove('active');
+                p.setAttribute('aria-pressed', 'false');
+            });
+            pill.setAttribute('aria-pressed', 'true');
             pill.classList.add('active');
             currentFilter = pill.dataset.filter || 'all';
             rebuildVisibleLogs();
@@ -1937,6 +2182,7 @@
         const filtered = allLogs.filter(matchesCurrentFilterAndSearch);
         const toRender = filtered.slice(-MAX_DOM_LOGS);
         toRender.forEach(renderLogItem);
+        updateConsoleEmptyState(toRender.length);
         if (isAutoScrollLocked && terminal) {
             terminal.scrollTop = terminal.scrollHeight;
         }
@@ -1979,24 +2225,93 @@
     }
 
     // ==========================================================================
+    // 7b. Keyboard shortcuts & header condense
+    // ==========================================================================
+
+    // Ctrl/Cmd + Enter submits the form exactly like clicking START CLONING.
+    document.addEventListener('keydown', (event) => {
+        if (!(event.ctrlKey || event.metaKey) || event.key !== 'Enter') return;
+        if (isRunning) return;
+        if (modalStack.length > 0) return;
+        if (!form) return;
+
+        event.preventDefault();
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+        } else {
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+    });
+
+    // Condense the sticky header once the workspace scrolls away.
+    if (mainHeader) {
+        let ticking = false;
+        const syncHeaderState = () => {
+            const condensed = window.scrollY > 24;
+            mainHeader.classList.toggle('is-condensed', condensed);
+            ticking = false;
+        };
+        window.addEventListener('scroll', () => {
+            if (ticking) return;
+            ticking = true;
+            window.requestAnimationFrame(syncHeaderState);
+        }, { passive: true });
+        syncHeaderState();
+    }
+
+    // ==========================================================================
     // 8. Toast Notifications System
     // ==========================================================================
 
+    const MAX_VISIBLE_TOASTS = 4;
+    let lastToastSignature = '';
+    let lastToastAt = 0;
+
     function showToast(message, type = 'info', duration = 3500) {
         if (!toastContainer) return;
+
+        // Collapse duplicate notifications fired in the same burst.
+        const signature = `${type}:${message}`;
+        const now = Date.now();
+        if (signature === lastToastSignature && now - lastToastAt < 1200) return;
+        lastToastSignature = signature;
+        lastToastAt = now;
+
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        toast.textContent = message;
+        // Errors interrupt; everything else is announced politely.
+        toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
 
+        const text = document.createElement('span');
+        text.className = 'toast-text';
+        text.textContent = message;
+
+        const dismiss = document.createElement('button');
+        dismiss.type = 'button';
+        dismiss.className = 'toast-dismiss';
+        dismiss.setAttribute('aria-label', 'Dismiss notification');
+        dismiss.textContent = '\u00D7';
+
+        toast.appendChild(text);
+        toast.appendChild(dismiss);
         toastContainer.appendChild(toast);
 
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateY(-10px)';
-            setTimeout(() => {
-                if (toast.parentNode) toast.parentNode.removeChild(toast);
-            }, 300);
-        }, duration);
+        // Keep the stack short so it never covers the workspace.
+        while (toastContainer.children.length > MAX_VISIBLE_TOASTS) {
+            const oldest = toastContainer.firstElementChild;
+            if (oldest) oldest.remove();
+        }
+
+        let removed = false;
+        const remove = () => {
+            if (removed) return;
+            removed = true;
+            toast.classList.add('toast-leaving');
+            setTimeout(() => toast.remove(), 220);
+        };
+
+        dismiss.addEventListener('click', remove);
+        setTimeout(remove, duration);
     }
 
 })();
