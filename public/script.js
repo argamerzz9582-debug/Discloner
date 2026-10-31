@@ -159,6 +159,8 @@
     let isAutoScrollLocked = true;
     let unreadLogsCount = 0;
     let currentJobId = null;
+    // Capability issued by the server at job start; required to cancel.
+    let currentJobToken = null;
     const MAX_DOM_LOGS = 600;
 
     let statCounters = {
@@ -169,9 +171,10 @@
         warnings: 0
     };
 
-    // Load active job ID from localStorage if exists
+    // Load active job ID + cancel capability from localStorage if exists
     try {
         currentJobId = localStorage.getItem('discloner_active_job_id');
+        currentJobToken = localStorage.getItem('discloner_active_job_token');
     } catch (e) {}
 
     // ==========================================================================
@@ -337,6 +340,7 @@
     if (clearTokenBtn && userTokenInput) {
         clearTokenBtn.addEventListener('click', () => {
             userTokenInput.value = '';
+            if (typeof purgeStoredToken === 'function') purgeStoredToken();
             userTokenInput.focus();
         });
     }
@@ -486,27 +490,114 @@
 
     // ==========================================================================
     // 4. Configuration & Token Persistence Engine (localStorage)
+    //
+    // The Discord token is a full account credential. It is therefore held in
+    // memory by default and only persisted when the operator explicitly opts in
+    // via the "Remember token on this device" switch.
     // ==========================================================================
     const CONFIG_STORAGE_KEY = 'discloner_user_config';
     const TOKEN_STORAGE_KEY = 'discloner_saved_user_token';
+    const TOKEN_REMEMBER_KEY = 'discloner_token_remember_opt_in';
+
+    const rememberTokenCheckbox = document.getElementById('rememberToken');
+    const rememberTokenBadge = document.getElementById('rememberTokenBadge');
+
+    function isTokenPersistenceEnabled() {
+        return rememberTokenCheckbox ? rememberTokenCheckbox.checked === true : false;
+    }
+
+    function clearActiveJobStorage() {
+        try {
+            localStorage.removeItem('discloner_active_job_id');
+        } catch (e) {}
+        try {
+            localStorage.removeItem('discloner_active_job_token');
+        } catch (e) {}
+        currentJobToken = null;
+    }
+
+    function purgeStoredToken() {
+        try {
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+        } catch (e) {}
+    }
+
+    function syncRememberTokenUi() {
+        if (!rememberTokenBadge) return;
+        const enabled = isTokenPersistenceEnabled();
+        rememberTokenBadge.textContent = enabled ? 'On' : 'Off';
+        rememberTokenBadge.classList.toggle('active', enabled);
+    }
 
     function saveUserToken(token) {
-        if (typeof token === 'string' && token.trim()) {
+        if (typeof token !== 'string' || !token.trim()) return;
+        const normalized = token.trim();
+
+        if (!isTokenPersistenceEnabled()) {
+            // Opt-out must actively scrub anything a previous session stored.
             try {
-                localStorage.setItem(TOKEN_STORAGE_KEY, token.trim());
+                localStorage.removeItem(TOKEN_STORAGE_KEY);
             } catch (e) {}
+            return;
         }
+
+        try {
+            localStorage.setItem(TOKEN_STORAGE_KEY, normalized);
+        } catch (e) {}
     }
 
     function loadUserToken() {
+        let persisted = null;
         try {
-            const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
-            if (saved && userTokenInput && !userTokenInput.value) {
-                userTokenInput.value = saved;
-                return saved;
-            }
+            persisted = localStorage.getItem(TOKEN_STORAGE_KEY);
         } catch (e) {}
+
+        const optedIn = (() => {
+            try {
+                return localStorage.getItem(TOKEN_REMEMBER_KEY) === 'true';
+            } catch (e) {
+                return false;
+            }
+        })();
+
+        if (rememberTokenCheckbox) {
+            rememberTokenCheckbox.checked = optedIn;
+        }
+        syncRememberTokenUi();
+
+        // One-time migration: earlier builds always stored the token. If the
+        // operator has not opted in, remove that stale credential immediately.
+        if (!optedIn && persisted) {
+            try {
+                localStorage.removeItem(TOKEN_STORAGE_KEY);
+            } catch (e) {}
+            persisted = null;
+        }
+
+        if (persisted && userTokenInput && !userTokenInput.value) {
+            userTokenInput.value = persisted;
+            return persisted;
+        }
         return null;
+    }
+
+    if (rememberTokenCheckbox) {
+        rememberTokenCheckbox.addEventListener('change', () => {
+            try {
+                localStorage.setItem(TOKEN_REMEMBER_KEY, String(isTokenPersistenceEnabled()));
+            } catch (e) {}
+
+            syncRememberTokenUi();
+
+            const currentValue = userTokenInput ? userTokenInput.value.trim() : '';
+            if (isTokenPersistenceEnabled()) {
+                if (currentValue) saveUserToken(currentValue);
+                showToast('Token will be remembered on this device.', 'warning');
+            } else {
+                purgeStoredToken();
+                showToast('Stored token removed from this browser.', 'info');
+            }
+        });
     }
 
     if (userTokenInput) {
@@ -554,7 +645,12 @@
             if (configSavedBadge) configSavedBadge.classList.remove('hidden');
             if (configSavedText) configSavedText.textContent = 'Saved Preferences Active';
 
-            showToast('Preferences and authorization token saved!', 'success');
+            showToast(
+                isTokenPersistenceEnabled()
+                    ? 'Preferences saved. Token remembered on this device.'
+                    : 'Preferences saved. Token kept in memory for this session only.',
+                'success'
+            );
 
             setTimeout(() => {
                 if (saveConfigBtn) saveConfigBtn.classList.remove('saved-state');
@@ -1138,7 +1234,7 @@
         cancelBtn.addEventListener('click', () => {
             if (!isRunning) return;
             appendLog('warning', 'Sending cancellation signal to background cloner engine...', 'CANCEL_REQ');
-            socket.emit('clone:cancel', { jobId: currentJobId });
+            socket.emit('clone:cancel', { jobId: currentJobId, jobToken: currentJobToken });
         });
     }
 
@@ -1428,7 +1524,7 @@
                 showCompletedModal(job.stats || {}, job.startedAt);
                 try {
                     localStorage.setItem('discloner_last_completed_job', job.id);
-                    localStorage.removeItem('discloner_active_job_id');
+                    clearActiveJobStorage();
                 } catch (e) {}
             }
             setRunningState(false);
@@ -1441,7 +1537,7 @@
             setRunningState(false);
             if (stageLabel) stageLabel.textContent = 'Error Encountered';
             try {
-                localStorage.removeItem('discloner_active_job_id');
+                clearActiveJobStorage();
             } catch (e) {}
         }
     }
@@ -1501,21 +1597,22 @@
     function cancelActiveJobOnUnload() {
         if (isRunning && currentJobId) {
             const jobIdToCancel = currentJobId;
+            const tokenParam = currentJobToken ? `?token=${encodeURIComponent(currentJobToken)}` : '';
             try {
                 if (navigator.sendBeacon) {
-                    navigator.sendBeacon(`/api/jobs/${encodeURIComponent(jobIdToCancel)}/cancel`, '');
+                    navigator.sendBeacon(`/api/jobs/${encodeURIComponent(jobIdToCancel)}/cancel${tokenParam}`, '');
                 } else {
-                    fetch(`/api/jobs/${encodeURIComponent(jobIdToCancel)}/cancel`, {
+                    fetch(`/api/jobs/${encodeURIComponent(jobIdToCancel)}/cancel${tokenParam}`, {
                         method: 'POST',
                         keepalive: true
                     }).catch(() => {});
                 }
             } catch (e) {}
             try {
-                socket.emit('clone:cancel', { jobId: jobIdToCancel });
+                socket.emit('clone:cancel', { jobId: jobIdToCancel, jobToken: currentJobToken });
             } catch (e) {}
             try {
-                localStorage.removeItem('discloner_active_job_id');
+                clearActiveJobStorage();
             } catch (e) {}
         }
     }
@@ -1555,8 +1652,12 @@
     socket.on('clone:started', (payload) => {
         if (payload.jobId) {
             currentJobId = payload.jobId;
+            currentJobToken = payload.jobToken || null;
             try {
                 localStorage.setItem('discloner_active_job_id', payload.jobId);
+                if (payload.jobToken) {
+                    localStorage.setItem('discloner_active_job_token', payload.jobToken);
+                }
             } catch (e) {}
         }
         operationStartTime = payload.startedAt || Date.now();
@@ -1624,7 +1725,7 @@
             if (payload.jobId) {
                 localStorage.setItem('discloner_last_completed_job', payload.jobId);
             }
-            localStorage.removeItem('discloner_active_job_id');
+            clearActiveJobStorage();
             currentJobId = null;
         } catch (e) {}
     });
@@ -1637,9 +1738,17 @@
         appendLog('error', errMessage, 'ERROR');
         showToast(errMessage, 'error');
         try {
-            localStorage.removeItem('discloner_active_job_id');
+            clearActiveJobStorage();
             currentJobId = null;
         } catch (e) {}
+    });
+
+    socket.on('system:shutdown', (data = {}) => {
+        setRunningState(false);
+        appendLog('error', `Server is shutting down: ${data.message || 'active migrations were cancelled.'}`, 'SHUTDOWN');
+        showToast('Server shut down. Any running migration was cancelled.', 'error', 6000);
+        clearActiveJobStorage();
+        currentJobId = null;
     });
 
     socket.on('clone:cancelled', () => {
@@ -1649,7 +1758,7 @@
         appendLog('warning', 'Operation cancelled by user.', 'CANCELLED');
         showToast('Operation cancelled.', 'warning');
         try {
-            localStorage.removeItem('discloner_active_job_id');
+            clearActiveJobStorage();
             currentJobId = null;
         } catch (e) {}
     });

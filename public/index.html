@@ -4,21 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>DISCLONER | Server Clone & Migration Studio</title>
-    <!-- Inline theme bootstrap script to avoid light/dark flash -->
-    <script>
-        (function() {
-            try {
-                const savedTheme = localStorage.getItem('discloner-theme');
-                if (savedTheme === 'dark') {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                } else {
-                    document.documentElement.setAttribute('data-theme', 'light');
-                }
-            } catch (e) {
-                document.documentElement.setAttribute('data-theme', 'light');
-            }
-        })();
-    </script>
+    <!-- Theme bootstrap (external so a strict CSP can be enforced) -->
+    <script src="theme-bootstrap.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -184,8 +171,21 @@
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="helper-icon">
                                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                                     </svg>
-                                    <span>Token auto-saved locally in browser storage for quick reuse.</span>
+                                    <span>Token stays in memory only. It is never written to browser storage unless you opt in below.</span>
                                 </div>
+                                <label class="neu-option-row token-remember-row" for="rememberToken">
+                                    <div class="option-text-group">
+                                        <div class="option-title-row">
+                                            <span class="option-title">Remember token on this device</span>
+                                            <span class="badge-opt-status" id="rememberTokenBadge">Off</span>
+                                        </div>
+                                        <p class="option-desc">Stores the token unencrypted in this browser's localStorage. Only enable on a device you alone control.</p>
+                                    </div>
+                                    <div class="neu-toggle">
+                                        <input type="checkbox" id="rememberToken" name="rememberToken">
+                                        <span class="neu-toggle-slider"></span>
+                                    </div>
+                                </label>
                             </div>
 
                             <!-- 2. Source → Target Server Routing -->
@@ -863,7 +863,7 @@
                 <div class="support-info-box">
                     <div class="support-info-row">
                         <span class="support-info-label">Version:</span>
-                        <span class="support-info-val font-mono">v2.0.0 (Clean Neumorphic)</span>
+                        <span class="support-info-val font-mono">v2.2.0 (Hardened)</span>
                     </div>
                     <div class="support-info-row">
                         <span class="support-info-label">Theme Engine:</span>

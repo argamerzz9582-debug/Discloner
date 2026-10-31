@@ -38,7 +38,10 @@ test('jobManager prevents duplicate active jobs for the same socket', async () =
         }
     );
 
-    // Cancel job1
-    jobManager.cancelJob(job1.id);
+    // A different socket cannot cancel this job
+    assert.equal(jobManager.cancelJob(job1.id, { socketId: 'socket_someone_else' }), false);
+
+    // The owning socket can cancel it
+    assert.equal(jobManager.cancelJob(job1.id, { socketId }), true);
     await job1._promise;
 });

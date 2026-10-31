@@ -3,6 +3,8 @@
  * Single source of truth for Discloner (frontend, backend, validation, presets, tests)
  */
 
+export const APP_VERSION = '2.2.0';
+
 export const DEFAULT_CONFIG = Object.freeze({
     // Core structural cloning
     cloneRoles: true,
@@ -22,14 +24,12 @@ export const DEFAULT_CONFIG = Object.freeze({
     msgLimit: 15,
     msgDelay: 1000, // 1000ms default migration delay
 
-    // Range constraints
+    // Range constraints (clamping bounds for user-supplied values)
     limits: Object.freeze({
         minMsgLimit: 1,
         maxMsgLimit: 1000,
-        defaultMsgLimit: 1000,
         minMsgDelay: 0,
-        maxMsgDelay: 5000,
-        defaultMsgDelay: 0
+        maxMsgDelay: 5000
     }),
 
     // Safety policies
@@ -90,6 +90,20 @@ export const RELIABILITY_CONFIG = Object.freeze({
         maxMessages: 20,
         maxCleaner: 20
     })
+});
+
+export const HTTP_GUARD = Object.freeze({
+    // Each migration start spins up a fresh Discord gateway session. Throttling
+    // protects the account behind the token from re-authentication abuse.
+    startLimit: 5,
+    startWindowMs: 60000,
+    // Preflight also authenticates, so it is throttled separately (per IP and
+    // per socket) to avoid burning gateway sessions on accidental double-clicks.
+    preflightLimit: 12,
+    preflightWindowMs: 60000,
+    preflightSocketCooldownMs: 4000,
+    maxBodySize: '32kb',
+    maxTrackedKeys: 2000
 });
 
 export const VERIFICATION_STATUSES = Object.freeze({

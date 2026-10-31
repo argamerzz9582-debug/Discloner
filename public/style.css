@@ -3358,3 +3358,32 @@ a {
         scroll-behavior: auto !important;
     }
 }
+
+/* ==========================================================================
+   Token persistence opt-in row (inside the credentials form group)
+   ========================================================================== */
+.token-remember-row {
+    margin-top: 8px;
+    padding: 10px 12px;
+    gap: 10px;
+}
+
+.token-remember-row .option-title {
+    font-size: 12.5px;
+}
+
+.token-remember-row .option-desc {
+    font-size: 11px;
+    max-width: 42ch;
+}
+
+.token-remember-row .badge-opt-status {
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.token-remember-row .badge-opt-status.active {
+    background-color: var(--accent-light);
+    color: var(--accent);
+    box-shadow: none;
+    border-color: rgba(46, 84, 230, 0.25);
+}

@@ -6,6 +6,7 @@ import {
     normalizeCloneOptions, 
     validateClonePayload 
 } from '../services/validationService.js';
+import { DEFAULT_CONFIG } from '../services/configContract.js';
 
 test('validateSnowflake rejects empty or non-numeric ids', () => {
     assert.equal(validateSnowflake('').valid, false);
@@ -43,9 +44,19 @@ test('normalizeCloneOptions sets sane defaults and clamps limits', () => {
     assert.equal(withMessages.cloneMessages, true);
     assert.equal(withMessages.cloneAttachments, true);
 
-    const clampedOpts = normalizeCloneOptions({ msgLimit: 999, msgDelay: 50 });
-    assert.equal(clampedOpts.msgLimit, 100);
-    assert.equal(clampedOpts.msgDelay, 200);
+    // Values inside the supported range are preserved verbatim
+    const inRange = normalizeCloneOptions({ msgLimit: 999, msgDelay: 50 });
+    assert.equal(inRange.msgLimit, 999);
+    assert.equal(inRange.msgDelay, 50);
+
+    // Out-of-range values clamp to the configured bounds
+    const clampedOpts = normalizeCloneOptions({ msgLimit: 999999, msgDelay: 999999 });
+    assert.equal(clampedOpts.msgLimit, DEFAULT_CONFIG.limits.maxMsgLimit);
+    assert.equal(clampedOpts.msgDelay, DEFAULT_CONFIG.limits.maxMsgDelay);
+
+    const floorOpts = normalizeCloneOptions({ msgLimit: -5, msgDelay: -120 });
+    assert.equal(floorOpts.msgLimit, DEFAULT_CONFIG.limits.minMsgLimit);
+    assert.equal(floorOpts.msgDelay, DEFAULT_CONFIG.limits.minMsgDelay);
 });
 
 test('validateClonePayload validates complete request payload', () => {
